@@ -2,24 +2,24 @@
 
 {% block content %}
 <div class="container mt-4">
-    <h2 class="mb-4">Licznik Klientów</h2>
+    <h2 class="mb-4 text-center">Licznik Klientów</h2>
     
     <div class="card">
         <div class="card-body text-center">
             <h3 class="mb-4">Dzisiaj ({{ counter.data|date:"d.m.Y" }})</h3>
-            <div class="d-flex justify-content-center align-items-center mb-4">
-                <form method="post" action="{% url 'produkty:zmien_licznik' 'minus' %}" class="me-3" id="minusForm">
+            <div class="counter-container">
+                <form method="post" action="{% url 'produkty:zmien_licznik' 'minus' %}" class="me-4" id="minusForm">
                     {% csrf_token %}
-                    <button type="submit" class="btn btn-outline-danger btn-lg" {% if counter.liczba_klientow == 0 %}disabled{% endif %}>
+                    <button type="submit" class="btn btn-outline-danger counter-btn" {% if counter.liczba_klientow == 0 %}disabled{% endif %}>
                         <i class="fas fa-minus"></i>
                     </button>
                 </form>
                 
                 <h1 id="licznikValue" class="display-1 mx-4">{{ counter.liczba_klientow }}</h1>
                 
-                <form method="post" action="{% url 'produkty:zmien_licznik' 'plus' %}" class="ms-3" id="plusForm">
+                <form method="post" action="{% url 'produkty:zmien_licznik' 'plus' %}" class="ms-4" id="plusForm">
                     {% csrf_token %}
-                    <button type="submit" class="btn btn-outline-success btn-lg">
+                    <button type="submit" class="btn btn-outline-success counter-btn">
                         <i class="fas fa-plus"></i>
                     </button>
                 </form>
@@ -27,6 +27,53 @@
         </div>
     </div>
 </div>
+
+<style>
+.counter-container {
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    margin: 2rem 0;
+}
+
+.counter-btn {
+    width: 80px;
+    height: 80px;
+    font-size: 2rem;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: all 0.3s ease;
+}
+
+.counter-btn:hover:not(:disabled) {
+    transform: scale(1.1);
+}
+
+.counter-btn:active:not(:disabled) {
+    transform: scale(0.95);
+}
+
+.display-1 {
+    font-size: 5rem;
+    font-weight: bold;
+    min-width: 150px;
+}
+
+@media (max-width: 768px) {
+    .counter-btn {
+        width: 60px;
+        height: 60px;
+        font-size: 1.5rem;
+    }
+    
+    .display-1 {
+        font-size: 3.5rem;
+        min-width: 100px;
+    }
+}
+</style>
 
 <script>
 document.addEventListener('DOMContentLoaded', function() {

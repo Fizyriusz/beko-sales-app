@@ -6,29 +6,50 @@ Strona Główna
 
 {% block content %}
 <div class="container">
+    <!-- Liczniki sprzedaży -->
+    <div class="row mb-4">
+        <div class="col-md-6">
+            <div class="card summary-card">
+                <div class="card-body text-center">
+                    <h5 class="card-title">Tygodniowa sprzedaż</h5>
+                    <p class="card-text amount">{{ tygodniowa_suma }} PLN</p>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-6">
+            <div class="card summary-card">
+                <div class="card-body text-center">
+                    <h5 class="card-title">Miesięczna sprzedaż</h5>
+                    <p class="card-text amount">{{ miesieczna_suma }} PLN</p>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Karty nawigacyjne -->
     <div class="row">
-        <div class="col-md-4 mb-4">
+        <div class="col-md-4 mb-3">
             <a href="{% url 'produkty:import_excel' %}" class="card-link">
-                <div class="card text-center">
-                    <div class="card-body">
+                <div class="card nav-card">
+                    <div class="card-body text-center">
                         <h5 class="card-title">Import Produktów</h5>
                     </div>
                 </div>
             </a>
         </div>
-        <div class="col-md-4 mb-4">
+        <div class="col-md-4 mb-3">
             <a href="{% url 'produkty:sprzedaz' %}" class="card-link">
-                <div class="card text-center">
-                    <div class="card-body">
+                <div class="card nav-card">
+                    <div class="card-body text-center">
                         <h5 class="card-title">Rejestracja Sprzedaży</h5>
                     </div>
                 </div>
             </a>
         </div>
-        <div class="col-md-4 mb-4">
+        <div class="col-md-4 mb-3">
             <a href="{% url 'produkty:podsumowanie_sprzedazy' %}" class="card-link">
-                <div class="card text-center">
-                    <div class="card-body">
+                <div class="card nav-card">
+                    <div class="card-body text-center">
                         <h5 class="card-title">Podsumowanie Sprzedaży</h5>
                     </div>
                 </div>
@@ -36,28 +57,28 @@ Strona Główna
         </div>
     </div>
     <div class="row">
-        <div class="col-md-4 mb-4">
+        <div class="col-md-4 mb-3">
             <a href="{% url 'produkty:wyciagnij_liste_modeli' %}" class="card-link">
-                <div class="card text-center">
-                    <div class="card-body">
+                <div class="card nav-card">
+                    <div class="card-body text-center">
                         <h5 class="card-title">Wyciągnij Listę Modeli</h5>
                     </div>
                 </div>
             </a>
         </div>
-        <div class="col-md-4 mb-4">
+        <div class="col-md-4 mb-3">
             <a href="{% url 'produkty:lista_zadaniowek' %}" class="card-link">
-                <div class="card text-center">
-                    <div class="card-body">
+                <div class="card nav-card">
+                    <div class="card-body text-center">
                         <h5 class="card-title">Zadaniowki</h5>
                     </div>
                 </div>
             </a>
         </div>
-        <div class="col-md-4 mb-4">
+        <div class="col-md-4 mb-3">
             <a href="{% url 'produkty:ekspozycja_form' grupa_id=1 %}" class="card-link">
-                <div class="card text-center">
-                    <div class="card-body">
+                <div class="card nav-card">
+                    <div class="card-body text-center">
                         <h5 class="card-title">Formularz Ekspozycji</h5>
                     </div>
                 </div>
@@ -65,10 +86,10 @@ Strona Główna
         </div>
     </div>
     <div class="row">
-        <div class="col-md-4 mb-4">
+        <div class="col-md-4 mb-3">
             <a href="{% url 'produkty:klienci' %}" class="card-link">
-                <div class="card text-center">
-                    <div class="card-body">
+                <div class="card nav-card">
+                    <div class="card-body text-center">
                         <h5 class="card-title">Licznik Klientów</h5>
                         <p class="card-text">Dzisiaj: {{ licznik_klientow }}</p>
                     </div>
@@ -80,10 +101,20 @@ Strona Główna
 
 <style>
 .card {
-    background-color: #00b894;
-    color: white;
     transition: transform 0.3s;
     height: 100%;
+    border: none;
+    box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+}
+
+.nav-card {
+    background-color: #00b894;
+    color: white;
+}
+
+.summary-card {
+    background-color: #2c3e50;
+    color: white;
 }
 
 .card:hover {
@@ -92,11 +123,37 @@ Strona Główna
 
 .card-link {
     text-decoration: none;
+    color: inherit;
+}
+
+.card-body {
+    padding: 1.25rem;
 }
 
 .card-title {
     margin: 0;
-    padding: 20px;
+    font-size: 1.1rem;
+    font-weight: 500;
+}
+
+.amount {
+    font-size: 1.5rem;
+    font-weight: bold;
+    margin: 0.5rem 0 0;
+}
+
+@media (max-width: 768px) {
+    .card {
+        margin-bottom: 1rem;
+    }
+    
+    .card-title {
+        font-size: 1rem;
+    }
+    
+    .amount {
+        font-size: 1.25rem;
+    }
 }
 </style>
 {% endblock %}
