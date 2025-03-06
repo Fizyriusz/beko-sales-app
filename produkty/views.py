@@ -11,7 +11,9 @@ from rapidfuzz import fuzz, process
 import re
 from django.db import models
 from django.http import HttpResponse
+from django.contrib.auth.decorators import login_required
 
+@login_required
 def test_template(request):
     try:
         template = get_template('produkty/import_form.html')
@@ -19,6 +21,7 @@ def test_template(request):
     except TemplateDoesNotExist:
         return render(request, 'produkty/home.html', {'error': 'Szablon nie istnieje'})
 
+@login_required
 def home(request):
     today = timezone.now().date()
     start_of_week = today - timedelta(days=today.weekday())
@@ -44,6 +47,7 @@ def home(request):
 # Ustaw logger
 logger = logging.getLogger(__name__)
 
+@login_required
 def import_excel(request):
     if request.method == 'POST' and request.FILES['file']:
         excel_file = request.FILES['file']
@@ -87,6 +91,7 @@ def import_excel(request):
 
 logger = logging.getLogger(__name__)
 
+@login_required
 def sprzedaz(request):
     if request.method == 'POST':
         # Obsługa zatwierdzenia sugestii
@@ -213,9 +218,11 @@ def sprzedaz(request):
 
     return render(request, 'produkty/sprzedaz.html')
 
+@login_required
 def sprzedaz_sukces(request):
     return render(request, 'produkty/sprzedaz_sukces.html')
 
+@login_required
 def podsumowanie_sprzedazy(request):
     # Pobieranie wartości filtrów z GET
     data_od = request.GET.get('data_od')
@@ -286,6 +293,7 @@ def podsumowanie_sprzedazy(request):
 
     return render(request, 'produkty/podsumowanie_sprzedazy.html', context)
 
+@login_required
 def wyciagnij_liste_modeli(request):
     if request.method == 'POST':
         tekst = request.POST.get('tekst_sprzedazy', '')
@@ -307,14 +315,17 @@ def wyciagnij_liste_modeli(request):
     else:
         return render(request, 'produkty/wyciagnij_liste_modeli.html')
 
+@login_required
 def lista_zadaniowek(request):
     zadaniowki = Task.objects.all()
     return render(request, 'produkty/lista_zadaniowek.html', {'zadaniowki': zadaniowki})
 
+@login_required
 def szczegoly_zadaniowki(request, task_id):
     zadaniowka = get_object_or_404(Task, pk=task_id)
     return render(request, 'produkty/szczegoly_zadaniowki.html', {'zadaniowka': zadaniowka})
 
+@login_required
 def postepy_zadaniowki(request, task_id):
     zadaniowka = get_object_or_404(Task, id=task_id)
     produkty = zadaniowka.produkty.all()
@@ -329,6 +340,7 @@ def postepy_zadaniowki(request, task_id):
     }
     return render(request, 'produkty/postepy_zadaniowki.html', context)
 
+@login_required
 def ekspozycja_form(request, grupa_id):
     grupa = get_object_or_404(GrupaProduktowa, id=grupa_id)
     marki = Marka.objects.all()
@@ -365,6 +377,7 @@ def ekspozycja_form(request, grupa_id):
     })
 
         
+@login_required
 def ekspozycja_summary(request):
     # Pobierz wszystkie dane ekspozycji z bazy danych
     ekspozycje = Ekspozycja.objects.select_related('grupa', 'marka').all()

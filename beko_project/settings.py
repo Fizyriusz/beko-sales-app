@@ -107,19 +107,7 @@ AUTH_PASSWORD_VALIDATORS = [
     },
 ]
 
-LOGGING = {
-       'version': 1,
-       'disable_existing_loggers': False,
-       'handlers': {
-           'console': {
-               'class': 'logging.StreamHandler',
-           },
-       },
-       'root': {
-           'handlers': ['console'],
-           'level': 'DEBUG',
-       },
-   }
+
 # Internationalization
 # https://docs.djangoproject.com/en/5.1/topics/i18n/
 
@@ -144,3 +132,8 @@ STATICFILES_STORAGE = 'whitenoise.storage.CompressedManifestStaticFilesStorage'
 # https://docs.djangoproject.com/en/5.1/ref/settings/#default-auto-field
 
 DEFAULT_AUTO_FIELD = "django.db.models.BigAutoField"
+
+# Ustawienia logowania
+LOGIN_URL = 'login'
+LOGIN_REDIRECT_URL = 'produkty:home'
+LOGOUT_REDIRECT_URL = 'login'
