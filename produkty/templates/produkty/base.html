@@ -7,7 +7,6 @@
     <link rel="stylesheet" href="{% static 'produkty/style.css' %}?v=5">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <style>
-        /* Istniejące style */
         body {
             font-family: Arial, sans-serif;
             margin: 0;
@@ -22,32 +21,17 @@
             border-radius: 5px;
             box-shadow: 0 0 10px rgba(0,0,0,0.1);
         }
-        nav {
-            background-color: #333;
-            padding: 10px;
-            margin-bottom: 20px;
-            border-radius: 5px;
-        }
-        nav a {
-            color: white;
-            text-decoration: none;
-            padding: 8px 15px;
-            margin-right: 10px;
-        }
-        nav a:hover {
-            background-color: #555;
-            border-radius: 3px;
-        }
         .logout-btn {
-            float: right;
-            background-color: #dc3545;
-            padding: 8px 15px;
-            color: white;
+            color: #dc3545;
             text-decoration: none;
-            border-radius: 3px;
+            padding: 8px 15px;
+            display: block;
+            margin-top: 20px;
+            border-top: 1px solid #eee;
         }
         .logout-btn:hover {
-            background-color: #c82333;
+            background-color: #dc3545;
+            color: white;
         }
     </style>
 </head>
@@ -75,23 +59,14 @@
                 <li><a href="{% url 'produkty:wyciagnij_liste_modeli' %}">Wyciągnij Listę Modeli</a></li>
                 <li><a href="{% url 'produkty:lista_zadaniowek' %}">Zadaniowki</a></li>
                 <li><a href="{% url 'produkty:ekspozycja_form' grupa_id=1 %}">Formularz Ekspozycji</a></li>
+                {% if user.is_authenticated %}
+                <li><a href="{% url 'logout' %}" class="logout-btn">Wyloguj się</a></li>
+                {% endif %}
             </ul>
         </div>
         
-        
         <!-- Główna zawartość -->
         <div class="main-content" id="main-content">
-            <nav>
-                <a href="{% url 'produkty:home' %}">Strona główna</a>
-                <a href="{% url 'produkty:import_excel' %}">Import</a>
-                <a href="{% url 'produkty:sprzedaz' %}">Sprzedaż</a>
-                <a href="{% url 'produkty:podsumowanie_sprzedazy' %}">Podsumowanie</a>
-                <a href="{% url 'produkty:lista_zadaniowek' %}">Zadaniówki</a>
-                <a href="{% url 'produkty:wyciagnij_liste_modeli' %}">Wyciągnij modele</a>
-                {% if user.is_authenticated %}
-                <a href="{% url 'logout' %}" class="logout-btn">Wyloguj się</a>
-                {% endif %}
-            </nav>
             {% block content %}{% endblock %}
         </div>
     </div>
@@ -140,7 +115,6 @@
     // Obsługa kliknięcia w hamburger w sidebarze
     closeHamburger.addEventListener('click', closeSidebar);
 });
-
     </script>
     
 </body>

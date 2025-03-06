@@ -3,7 +3,18 @@
 {% block title %}Logowanie{% endblock %}
 
 {% block content %}
-<div style="max-width: 400px; margin: 50px auto; padding: 20px; border: 1px solid #ddd; border-radius: 5px;">
+<style>
+    .header, .hamburger {
+        display: none;
+    }
+    .container {
+        max-width: 400px;
+        margin: 50px auto;
+        padding: 20px;
+    }
+</style>
+
+<div style="max-width: 400px; margin: 50px auto; padding: 20px;">
     <h2 style="text-align: center; margin-bottom: 20px;">Logowanie</h2>
     
     <form method="post" style="display: flex; flex-direction: column; gap: 15px;">
