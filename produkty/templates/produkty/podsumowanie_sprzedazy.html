@@ -4,6 +4,16 @@
 
 {% block content %}
 <h1>Podsumowanie Sprzedaży</h1>
+
+<div style="margin-bottom: 20px;">
+    <form method="post" action="{% url 'produkty:reset_sprzedaz' %}" style="display: inline;" onsubmit="return confirm('Czy na pewno chcesz zresetować wszystkie dane sprzedaży?');">
+        {% csrf_token %}
+        <button type="submit" style="background-color: #dc3545; color: white; border: none; padding: 10px 20px; border-radius: 4px; cursor: pointer;">
+            Resetuj wszystkie dane
+        </button>
+    </form>
+</div>
+
 <p><strong>Liczba sprzedanych sztuk:</strong> {{ liczba_sztuk }}</p>
 <p><strong>Całkowita prowizja:</strong> {{ calkowita_prowizja }} PLN</p>
 
@@ -30,7 +40,6 @@
         {% endfor %}
     </tbody>
 </table>
-
 
 <h3>Filtruj sprzedaż:</h3>
 <form method="get" action="">

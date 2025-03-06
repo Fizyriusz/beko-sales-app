@@ -10,6 +10,7 @@ urlpatterns = [
     path('sprzedaz/', views.sprzedaz, name='sprzedaz'),
     path('sprzedaz/sukces/', views.sprzedaz_sukces, name='sprzedaz_sukces'),
     path('podsumowanie/', views.podsumowanie_sprzedazy, name='podsumowanie_sprzedazy'),
+    path('podsumowanie/reset/', views.reset_sprzedaz, name='reset_sprzedaz'),
     path('wyciagnij_liste_modeli/', views.wyciagnij_liste_modeli, name='wyciagnij_liste_modeli'),  # Nowy widok wyciągania listy modeli
 
   # Nowe ścieżki do widoków związanych z zadaniówkami
@@ -18,4 +19,6 @@ urlpatterns = [
     path('zadaniowka/<int:task_id>/postepy/', views.postepy_zadaniowki, name='postepy_zadaniowki'),
     path('ekspozycja/<int:grupa_id>/', views.ekspozycja_form, name='ekspozycja_form'),
     path('ekspozycja-summary/', views.ekspozycja_summary, name='ekspozycja_summary'),
+    path('klienci/', views.klienci, name='klienci'),
+    path('klienci/zmien/<str:operacja>/', views.zmien_licznik, name='zmien_licznik'),
 ]

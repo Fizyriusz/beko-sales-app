@@ -1,5 +1,5 @@
 from django.shortcuts import render, redirect, get_object_or_404
-from .models import Produkt, Sprzedaz, Task, Ekspozycja, GrupaProduktowa, Marka 
+from .models import Produkt, Sprzedaz, Task, Ekspozycja, GrupaProduktowa, Marka, KlientCounter
 import openpyxl
 from decimal import Decimal, InvalidOperation
 import logging
@@ -10,7 +10,7 @@ from datetime import timedelta
 from rapidfuzz import fuzz, process 
 import re
 from django.db import models
-from django.http import HttpResponse
+from django.http import HttpResponse, JsonResponse
 from django.contrib.auth.decorators import login_required
 
 @login_required
@@ -30,8 +30,15 @@ def home(request):
     sprzedaz_tygodniowa = Sprzedaz.objects.filter(data_sprzedazy__gte=start_of_week)
     sprzedaz_miesieczna = Sprzedaz.objects.filter(data_sprzedazy__gte=start_of_month)
 
-    tygodniowa_suma = sprzedaz_tygodniowa.aggregate(Sum('produkt__stawka'))['produkt__stawka__sum'] or 0
-    miesieczna_suma = sprzedaz_miesieczna.aggregate(Sum('produkt__stawka'))['produkt__stawka__sum'] or 0
+    # Obliczanie sum prowizji
+    tygodniowa_suma = sum(
+        sprzedaz.produkt.stawka * sprzedaz.liczba_sztuk 
+        for sprzedaz in sprzedaz_tygodniowa
+    )
+    miesieczna_suma = sum(
+        sprzedaz.produkt.stawka * sprzedaz.liczba_sztuk 
+        for sprzedaz in sprzedaz_miesieczna
+    )
 
     najczesciej_sprzedawane = Sprzedaz.objects.values('produkt__model').annotate(
         liczba_sztuk=Sum('liczba_sztuk')
@@ -396,3 +403,38 @@ def ekspozycja_summary(request):
     return render(request, 'produkty/ekspozycja_summary.html', {
         'dane_podsumowania': dane_podsumowania,
     })
+
+@login_required
+def reset_sprzedaz(request):
+    if request.method == 'POST':
+        Sprzedaz.objects.all().delete()
+        return redirect('produkty:podsumowanie_sprzedazy')
+    return redirect('produkty:podsumowanie_sprzedazy')
+
+@login_required
+def klienci(request):
+    today = timezone.now().date()
+    counter, created = KlientCounter.objects.get_or_create(data=today)
+    
+    context = {
+        'counter': counter,
+    }
+    return render(request, 'produkty/klienci.html', context)
+
+@login_required
+def zmien_licznik(request, operacja):
+    if request.method == 'POST':
+        today = timezone.now().date()
+        counter, created = KlientCounter.objects.get_or_create(data=today)
+        
+        if operacja == 'plus':
+            counter.liczba_klientow += 1
+        elif operacja == 'minus' and counter.liczba_klientow > 0:
+            counter.liczba_klientow -= 1
+            
+        counter.save()
+        
+        if request.headers.get('X-Requested-With') == 'XMLHttpRequest':
+            return JsonResponse({'liczba_klientow': counter.liczba_klientow})
+        
+    return redirect('produkty:klienci')

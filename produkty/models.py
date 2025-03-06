@@ -52,3 +52,11 @@ class Ekspozycja(models.Model):
 
     def __str__(self):
         return f"{self.grupa.nazwa} - {self.marka.nazwa}: {self.liczba}"
+
+class KlientCounter(models.Model):
+    data = models.DateField(auto_now_add=True)
+    liczba_klientow = models.IntegerField(default=0)
+    notatka = models.TextField(blank=True, null=True)
+
+    def __str__(self):
+        return f"Licznik klientów z dnia {self.data}: {self.liczba_klientow}"

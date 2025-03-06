@@ -1,0 +1,56 @@
+{% extends 'produkty/base.html' %}
+
+{% block content %}
+<div class="container mt-4">
+    <h2 class="mb-4">Licznik Klientów</h2>
+    
+    <div class="card">
+        <div class="card-body text-center">
+            <h3 class="mb-4">Dzisiaj ({{ counter.data|date:"d.m.Y" }})</h3>
+            <div class="d-flex justify-content-center align-items-center mb-4">
+                <form method="post" action="{% url 'produkty:zmien_licznik' 'minus' %}" class="me-3" id="minusForm">
+                    {% csrf_token %}
+                    <button type="submit" class="btn btn-outline-danger btn-lg" {% if counter.liczba_klientow == 0 %}disabled{% endif %}>
+                        <i class="fas fa-minus"></i>
+                    </button>
+                </form>
+                
+                <h1 id="licznikValue" class="display-1 mx-4">{{ counter.liczba_klientow }}</h1>
+                
+                <form method="post" action="{% url 'produkty:zmien_licznik' 'plus' %}" class="ms-3" id="plusForm">
+                    {% csrf_token %}
+                    <button type="submit" class="btn btn-outline-success btn-lg">
+                        <i class="fas fa-plus"></i>
+                    </button>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    const forms = document.querySelectorAll('#plusForm, #minusForm');
+    const licznikValue = document.getElementById('licznikValue');
+    
+    forms.forEach(form => {
+        form.addEventListener('submit', function(e) {
+            e.preventDefault();
+            
+            fetch(this.action, {
+                method: 'POST',
+                headers: {
+                    'X-Requested-With': 'XMLHttpRequest',
+                    'X-CSRFToken': this.querySelector('[name=csrfmiddlewaretoken]').value
+                }
+            })
+            .then(response => response.json())
+            .then(data => {
+                licznikValue.textContent = data.liczba_klientow;
+                document.querySelector('#minusForm button').disabled = data.liczba_klientow === 0;
+            });
+        });
+    });
+});
+</script>
+{% endblock %} 

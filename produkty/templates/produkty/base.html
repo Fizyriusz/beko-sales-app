@@ -10,12 +10,39 @@
         body {
             font-family: Arial, sans-serif;
             margin: 0;
-            padding: 20px;
+            padding: 0;
             background-color: #f5f5f5;
+        }
+        .header {
+            background-color: #2c3e50;
+            color: white;
+            padding: 15px;
+            margin: 0;
+            width: 100%;
+            position: fixed;
+            top: 0;
+            z-index: 1000;
+            box-shadow: 0 2px 5px rgba(0,0,0,0.1);
+        }
+        .header h1 {
+            margin: 0;
+            font-size: 24px;
+            padding-left: 50px;
+        }
+        .hamburger {
+            position: absolute;
+            left: 15px;
+            top: 50%;
+            transform: translateY(-50%);
+            background: none;
+            border: none;
+            color: white;
+            font-size: 24px;
+            cursor: pointer;
         }
         .container {
             max-width: 1200px;
-            margin: 0 auto;
+            margin: 80px auto 20px;
             background-color: white;
             padding: 20px;
             border-radius: 5px;
@@ -32,6 +59,58 @@
         .logout-btn:hover {
             background-color: #dc3545;
             color: white;
+        }
+        .sidebar {
+            position: fixed;
+            left: -250px;
+            top: 0;
+            height: 100%;
+            width: 250px;
+            background-color: white;
+            transition: 0.3s;
+            z-index: 1001;
+            box-shadow: 2px 0 5px rgba(0,0,0,0.1);
+            padding-top: 60px;
+        }
+        .sidebar.open {
+            left: 0;
+        }
+        .overlay {
+            display: none;
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: rgba(0,0,0,0.5);
+            z-index: 1000;
+        }
+        .overlay.active {
+            display: block;
+        }
+        .sidebar ul {
+            list-style: none;
+            padding: 0;
+            margin: 0;
+        }
+        .sidebar ul li a {
+            padding: 10px 15px;
+            display: block;
+            color: #333;
+            text-decoration: none;
+            transition: 0.2s;
+        }
+        .sidebar ul li a:hover {
+            background-color: #f5f5f5;
+        }
+        .close-hamburger {
+            position: absolute;
+            top: 10px;
+            right: 10px;
+            background: none;
+            border: none;
+            font-size: 24px;
+            cursor: pointer;
         }
     </style>
 </head>
@@ -59,6 +138,12 @@
                 <li><a href="{% url 'produkty:wyciagnij_liste_modeli' %}">Wyciągnij Listę Modeli</a></li>
                 <li><a href="{% url 'produkty:lista_zadaniowek' %}">Zadaniowki</a></li>
                 <li><a href="{% url 'produkty:ekspozycja_form' grupa_id=1 %}">Formularz Ekspozycji</a></li>
+                <li><a href="{% url 'produkty:ekspozycja_summary' %}" class="list-group-item list-group-item-action">
+                    <i class="fas fa-chart-bar me-2"></i> Podsumowanie ekspozycji
+                </a></li>
+                <li><a href="{% url 'produkty:klienci' %}" class="list-group-item list-group-item-action">
+                    <i class="fas fa-users me-2"></i> Licznik klientów
+                </a></li>
                 {% if user.is_authenticated %}
                 <li><a href="{% url 'logout' %}" class="logout-btn">Wyloguj się</a></li>
                 {% endif %}
@@ -72,50 +157,40 @@
     </div>
 
     <script>
-   document.addEventListener('DOMContentLoaded', () => {
-    const sidebar = document.getElementById('sidebar');
-    const container = document.getElementById('container');
-    const overlay = document.getElementById('overlay');
-    const links = document.querySelectorAll('.sidebar a');
-    const hamburger = document.querySelector('.hamburger');
-    const closeHamburger = document.querySelector('.close-hamburger');
+    document.addEventListener('DOMContentLoaded', () => {
+        const sidebar = document.getElementById('sidebar');
+        const container = document.getElementById('container');
+        const overlay = document.getElementById('overlay');
+        const links = document.querySelectorAll('.sidebar a');
+        const hamburger = document.querySelector('.hamburger');
+        const closeHamburger = document.querySelector('.close-hamburger');
 
-    function toggleSidebar() {
-        const isOpen = sidebar.classList.contains('open');
-        if (isOpen) {
-            closeSidebar();
-        } else {
-            openSidebar();
+        function toggleSidebar() {
+            const isOpen = sidebar.classList.contains('open');
+            if (isOpen) {
+                closeSidebar();
+            } else {
+                openSidebar();
+            }
         }
-    }
 
-    function openSidebar() {
-        sidebar.classList.add('open');
-        container.classList.add('with-sidebar');
-        overlay.classList.add('active');
-    }
+        function openSidebar() {
+            sidebar.classList.add('open');
+            overlay.classList.add('active');
+        }
 
-    function closeSidebar() {
-        sidebar.classList.remove('open');
-        container.classList.remove('with-sidebar');
-        overlay.classList.remove('active');
-    }
+        function closeSidebar() {
+            sidebar.classList.remove('open');
+            overlay.classList.remove('active');
+        }
 
-    // Obsługa kliknięcia w głównego hamburgera
-    hamburger.addEventListener('click', toggleSidebar);
-
-    // Obsługa kliknięcia w linki sidebaru
-    links.forEach(link => {
-        link.addEventListener('click', closeSidebar);
+        hamburger.addEventListener('click', toggleSidebar);
+        links.forEach(link => {
+            link.addEventListener('click', closeSidebar);
+        });
+        overlay.addEventListener('click', closeSidebar);
+        closeHamburger.addEventListener('click', closeSidebar);
     });
-
-    // Obsługa kliknięcia w overlay
-    overlay.addEventListener('click', closeSidebar);
-
-    // Obsługa kliknięcia w hamburger w sidebarze
-    closeHamburger.addEventListener('click', closeSidebar);
-});
     </script>
-    
 </body>
 </html>
