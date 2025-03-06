@@ -40,6 +40,9 @@ def home(request):
         for sprzedaz in sprzedaz_miesieczna
     )
 
+    # Pobierz licznik klientów na dziś
+    licznik, _ = KlientCounter.objects.get_or_create(data=today)
+
     najczesciej_sprzedawane = Sprzedaz.objects.values('produkt__model').annotate(
         liczba_sztuk=Sum('liczba_sztuk')
     ).order_by('-liczba_sztuk')[:5]
@@ -48,6 +51,7 @@ def home(request):
         'najczesciej_sprzedawane': najczesciej_sprzedawane,
         'tygodniowa_suma': tygodniowa_suma,
         'miesieczna_suma': miesieczna_suma,
+        'licznik_klientow': licznik.liczba_klientow,
     }
 
     return render(request, 'produkty/home.html', context)
