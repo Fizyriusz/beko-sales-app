@@ -12,6 +12,9 @@ import re
 from django.db import models
 from django.http import HttpResponse, JsonResponse
 from django.contrib.auth.decorators import login_required
+from openpyxl.styles import PatternFill, Font, Alignment, Border, Side
+from openpyxl.utils import get_column_letter
+from io import BytesIO
 
 @login_required
 def test_template(request):
@@ -442,3 +445,143 @@ def zmien_licznik(request, operacja):
             return JsonResponse({'liczba_klientow': counter.liczba_klientow})
         
     return redirect('produkty:klienci')
+
+@login_required
+def eksportuj_ekspozycje_xlsx(request):
+    # Tworzenie nowego arkusza Excel
+    wb = openpyxl.Workbook()
+    ws = wb.active
+    ws.title = "Ekspozycja"
+    
+    # Pobieranie danych
+    grupy = GrupaProduktowa.objects.all().order_by('id')
+    marki = Marka.objects.all().order_by('id')
+    ekspozycje = Ekspozycja.objects.select_related('grupa', 'marka').all()
+    
+    # Stylizacja
+    header_fill = PatternFill(start_color="2C3E50", end_color="2C3E50", fill_type="solid")
+    header_font = Font(color="FFFFFF", bold=True)
+    header_alignment = Alignment(horizontal='center', vertical='center')
+    thin_border = Border(left=Side(style='thin'), right=Side(style='thin'), top=Side(style='thin'), bottom=Side(style='thin'))
+    
+    # Nagłówki
+    ws['A1'] = "Lista TOTAL duża AGD udziały producentów"
+    ws['A1'].font = Font(bold=True)
+    ws.merge_cells('A1:BV1')
+    
+    ws['A2'] = "Kategoria"
+    ws['A2'].fill = header_fill
+    ws['A2'].font = header_font
+    ws['A2'].alignment = header_alignment
+    ws['A2'].border = thin_border
+    
+    ws['B2'] = "Produkty TOTAL suma"
+    ws['B2'].fill = header_fill
+    ws['B2'].font = header_font
+    ws['B2'].alignment = header_alignment
+    ws['B2'].border = thin_border
+    
+    # Dodawanie nagłówków marek
+    col_index = 3
+    for marka in marki:
+        col_letter = get_column_letter(col_index)
+        ws[f'{col_letter}2'] = f"{marka.nazwa} ilość"
+        ws[f'{col_letter}2'].fill = header_fill
+        ws[f'{col_letter}2'].font = header_font
+        ws[f'{col_letter}2'].alignment = header_alignment
+        ws[f'{col_letter}2'].border = thin_border
+        
+        col_letter = get_column_letter(col_index + 1)
+        ws[f'{col_letter}2'] = f"{marka.nazwa} %"
+        ws[f'{col_letter}2'].fill = header_fill
+        ws[f'{col_letter}2'].font = header_font
+        ws[f'{col_letter}2'].alignment = header_alignment
+        ws[f'{col_letter}2'].border = thin_border
+        
+        col_index += 2
+    
+    # Wypełnianie danymi
+    row_index = 3
+    for grupa in grupy:
+        # Nazwa grupy
+        ws[f'A{row_index}'] = grupa.nazwa
+        ws[f'A{row_index}'].border = thin_border
+        
+        # Obliczanie sumy dla grupy
+        suma_grupa = sum([ekspozycja.liczba for ekspozycja in ekspozycje.filter(grupa=grupa)])
+        ws[f'B{row_index}'] = suma_grupa
+        ws[f'B{row_index}'].border = thin_border
+        
+        # Wypełnianie danymi dla każdej marki
+        col_index = 3
+        for marka in marki:
+            try:
+                ekspozycja = ekspozycje.get(grupa=grupa, marka=marka)
+                liczba = ekspozycja.liczba
+            except Ekspozycja.DoesNotExist:
+                liczba = 0
+            
+            # Ilość
+            col_letter = get_column_letter(col_index)
+            ws[f'{col_letter}{row_index}'] = liczba
+            ws[f'{col_letter}{row_index}'].border = thin_border
+            
+            # Procent
+            col_letter = get_column_letter(col_index + 1)
+            if suma_grupa > 0:
+                procent = (liczba / suma_grupa) * 100
+                ws[f'{col_letter}{row_index}'] = f"{procent:.1f}%"
+            else:
+                ws[f'{col_letter}{row_index}'] = "#DIV/0!"
+            ws[f'{col_letter}{row_index}'].border = thin_border
+            
+            col_index += 2
+        
+        row_index += 1
+    
+    # Dodawanie wiersza podsumowania
+    ws[f'A{row_index}'] = "Udziały producenta w ekspozycji produktów TOTAL"
+    ws[f'A{row_index}'].border = thin_border
+    
+    # Obliczanie sumy całkowitej
+    suma_total = sum([ekspozycja.liczba for ekspozycja in ekspozycje])
+    ws[f'B{row_index}'] = suma_total
+    ws[f'B{row_index}'].border = thin_border
+    
+    # Wypełnianie podsumowania dla każdej marki
+    col_index = 3
+    for marka in marki:
+        suma_marka = sum([ekspozycja.liczba for ekspozycja in ekspozycje.filter(marka=marka)])
+        
+        # Ilość
+        col_letter = get_column_letter(col_index)
+        ws[f'{col_letter}{row_index}'] = suma_marka
+        ws[f'{col_letter}{row_index}'].border = thin_border
+        
+        # Procent
+        col_letter = get_column_letter(col_index + 1)
+        if suma_total > 0:
+            procent = (suma_marka / suma_total) * 100
+            ws[f'{col_letter}{row_index}'] = f"{procent:.1f}%"
+        else:
+            ws[f'{col_letter}{row_index}'] = "#DIV/0!"
+        ws[f'{col_letter}{row_index}'].border = thin_border
+        
+        col_index += 2
+    
+    # Dostosowanie szerokości kolumn
+    for col in range(1, col_index):
+        ws.column_dimensions[get_column_letter(col)].width = 15
+    
+    # Zapisywanie do bufora i zwracanie jako odpowiedź HTTP
+    buffer = BytesIO()
+    wb.save(buffer)
+    buffer.seek(0)
+    
+    response = HttpResponse(
+        buffer.getvalue(),
+        content_type='application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'
+    )
+    response['Content-Disposition'] = 'attachment; filename=ekspozycja.xlsx'
+    
+    return response

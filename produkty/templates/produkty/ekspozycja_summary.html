@@ -18,5 +18,8 @@ Podsumowanie Ekspozycji
         </li>
     {% endfor %}
 </ul>
-<a href="{% url 'produkty:home' %}">Powrót do strony głównej</a>
+<div class="action-buttons">
+    <a href="{% url 'produkty:home' %}" class="btn btn-secondary">Powrót do strony głównej</a>
+    <a href="{% url 'produkty:ekspozycja_export' %}" class="btn btn-primary">Eksportuj do Excel</a>
+</div>
 {% endblock %}

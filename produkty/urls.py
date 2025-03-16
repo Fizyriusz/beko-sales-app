@@ -19,6 +19,7 @@ urlpatterns = [
     path('zadaniowka/<int:task_id>/postepy/', views.postepy_zadaniowki, name='postepy_zadaniowki'),
     path('ekspozycja/<int:grupa_id>/', views.ekspozycja_form, name='ekspozycja_form'),
     path('ekspozycja-summary/', views.ekspozycja_summary, name='ekspozycja_summary'),
+    path('ekspozycja-export/', views.eksportuj_ekspozycje_xlsx, name='ekspozycja_export'),
     path('klienci/', views.klienci, name='klienci'),
     path('klienci/zmien/<str:operacja>/', views.zmien_licznik, name='zmien_licznik'),
 ]
