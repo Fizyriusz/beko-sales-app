@@ -7,8 +7,13 @@
     <h2>Zarządzanie Zadaniówkami</h2>
     
     <div class="mb-3">
-        <a href="{% url 'produkty:zadaniowka_dodaj' %}" class="btn btn-success">Dodaj nową zadaniówkę</a>
-        <a href="{% url 'produkty:home' %}" class="btn btn-secondary">Powrót do strony głównej</a>
+        <div class="card nav-card mb-3" style="max-width: 250px;">
+            <a href="{% url 'produkty:zadaniowka_dodaj' %}" class="card-link text-white">
+                <div class="card-body text-center">
+                    <h5 class="card-title">Dodaj nową zadaniówkę</h5>
+                </div>
+            </a>
+        </div>
     </div>
     
     <div class="table-responsive">
@@ -19,7 +24,7 @@
                     <th>Okres</th>
                     <th>Min. liczba sztuk</th>
                     <th>Mnożnik stawki</th>
-                    <th>Akcje</th>
+                    <th class="text-center">Akcje</th>
                 </tr>
             </thead>
             <tbody>
@@ -29,7 +34,7 @@
                     <td>{{ zadaniowka.data_od|date:"d.m.Y" }} - {{ zadaniowka.data_do|date:"d.m.Y" }}</td>
                     <td>{{ zadaniowka.minimalna_liczba_sztuk }}</td>
                     <td>{{ zadaniowka.mnoznik_stawki }}</td>
-                    <td>
+                    <td class="text-center">
                         <div class="btn-group" role="group">
                             <a href="{% url 'produkty:postepy_zadaniowki' zadaniowka.id %}" class="btn btn-info btn-sm">Postępy</a>
                             <a href="{% url 'produkty:zadaniowka_edytuj' zadaniowka.id %}" class="btn btn-warning btn-sm">Edytuj</a>
@@ -45,5 +50,24 @@
             </tbody>
         </table>
     </div>
+    
+    <div class="mt-4 mb-3">
+        <a href="{% url 'produkty:home' %}" class="btn btn-secondary">Powrót do strony głównej</a>
+    </div>
 </div>
+
+<style>
+.nav-card {
+    background-color: #00b894;
+    transition: transform 0.3s;
+    border: none;
+    box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+}
+.nav-card:hover {
+    transform: translateY(-5px);
+}
+.card-link {
+    text-decoration: none;
+}
+</style>
 {% endblock %} 

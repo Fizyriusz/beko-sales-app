@@ -6,8 +6,90 @@ Strona Główna
 
 {% block content %}
 <div class="container">
+    <!-- Karty nawigacyjne -->
+    <div class="row mb-3">
+        <div class="col-md-3 mb-2">
+            <a href="{% url 'produkty:import_excel' %}" class="card-link">
+                <div class="card nav-card">
+                    <div class="card-body text-center py-2">
+                        <h5 class="card-title small-title">Import Produktów</h5>
+                    </div>
+                </div>
+            </a>
+        </div>
+        <div class="col-md-3 mb-2">
+            <a href="{% url 'produkty:sprzedaz' %}" class="card-link">
+                <div class="card nav-card">
+                    <div class="card-body text-center py-2">
+                        <h5 class="card-title small-title">Rejestracja Sprzedaży</h5>
+                    </div>
+                </div>
+            </a>
+        </div>
+        <div class="col-md-3 mb-2">
+            <a href="{% url 'produkty:podsumowanie_sprzedazy' %}" class="card-link">
+                <div class="card nav-card">
+                    <div class="card-body text-center py-2">
+                        <h5 class="card-title small-title">Podsumowanie Sprzedaży</h5>
+                    </div>
+                </div>
+            </a>
+        </div>
+        <div class="col-md-3 mb-2">
+            <a href="{% url 'produkty:wyciagnij_liste_modeli' %}" class="card-link">
+                <div class="card nav-card">
+                    <div class="card-body text-center py-2">
+                        <h5 class="card-title small-title">Wyciągnij Listę Modeli</h5>
+                    </div>
+                </div>
+            </a>
+        </div>
+    </div>
+    <div class="row mb-3">
+        <div class="col-md-3 mb-2">
+            <a href="{% url 'produkty:lista_zadaniowek' %}" class="card-link">
+                <div class="card nav-card">
+                    <div class="card-body text-center py-2">
+                        <h5 class="card-title small-title">Zadaniowki</h5>
+                    </div>
+                </div>
+            </a>
+        </div>
+        <div class="col-md-3 mb-2">
+            <a href="{% url 'produkty:ekspozycja_form' grupa_id=1 %}" class="card-link">
+                <div class="card nav-card">
+                    <div class="card-body text-center py-2">
+                        <h5 class="card-title small-title">Formularz Ekspozycji</h5>
+                    </div>
+                </div>
+            </a>
+        </div>
+        <div class="col-md-3 mb-2">
+            <a href="{% url 'produkty:zadaniowki_management' %}" class="card-link">
+                <div class="card nav-card">
+                    <div class="card-body text-center py-2">
+                        <h5 class="card-title small-title">Zarządzanie Zadaniówkami</h5>
+                    </div>
+                </div>
+            </a>
+        </div>
+    </div>
+    
+    <!-- Licznik klientów -->
+    <div class="row mb-3 mt-4">
+        <div class="col-md-12">
+            <div class="card summary-card-alt">
+                <div class="card-body text-center">
+                    <h5 class="card-title">Licznik Klientów</h5>
+                    <p class="card-text amount">{{ licznik_klientow }}</p>
+                    <a href="{% url 'produkty:klienci' %}" class="btn btn-light btn-sm mt-2">Przejdź do licznika</a>
+                </div>
+            </div>
+        </div>
+    </div>
+
     <!-- Liczniki sprzedaży -->
-    <div class="row mb-4">
+    <div class="row mb-4 mt-3">
         <div class="col-md-6">
             <div class="card summary-card">
                 <div class="card-body text-center">
@@ -23,87 +105,6 @@ Strona Główna
                     <p class="card-text amount">{{ miesieczna_suma }} PLN</p>
                 </div>
             </div>
-        </div>
-    </div>
-
-    <!-- Karty nawigacyjne -->
-    <div class="row">
-        <div class="col-md-4 mb-3">
-            <a href="{% url 'produkty:import_excel' %}" class="card-link">
-                <div class="card nav-card">
-                    <div class="card-body text-center">
-                        <h5 class="card-title">Import Produktów</h5>
-                    </div>
-                </div>
-            </a>
-        </div>
-        <div class="col-md-4 mb-3">
-            <a href="{% url 'produkty:sprzedaz' %}" class="card-link">
-                <div class="card nav-card">
-                    <div class="card-body text-center">
-                        <h5 class="card-title">Rejestracja Sprzedaży</h5>
-                    </div>
-                </div>
-            </a>
-        </div>
-        <div class="col-md-4 mb-3">
-            <a href="{% url 'produkty:podsumowanie_sprzedazy' %}" class="card-link">
-                <div class="card nav-card">
-                    <div class="card-body text-center">
-                        <h5 class="card-title">Podsumowanie Sprzedaży</h5>
-                    </div>
-                </div>
-            </a>
-        </div>
-    </div>
-    <div class="row">
-        <div class="col-md-4 mb-3">
-            <a href="{% url 'produkty:wyciagnij_liste_modeli' %}" class="card-link">
-                <div class="card nav-card">
-                    <div class="card-body text-center">
-                        <h5 class="card-title">Wyciągnij Listę Modeli</h5>
-                    </div>
-                </div>
-            </a>
-        </div>
-        <div class="col-md-4 mb-3">
-            <a href="{% url 'produkty:lista_zadaniowek' %}" class="card-link">
-                <div class="card nav-card">
-                    <div class="card-body text-center">
-                        <h5 class="card-title">Zadaniowki</h5>
-                    </div>
-                </div>
-            </a>
-        </div>
-        <div class="col-md-4 mb-3">
-            <a href="{% url 'produkty:ekspozycja_form' grupa_id=1 %}" class="card-link">
-                <div class="card nav-card">
-                    <div class="card-body text-center">
-                        <h5 class="card-title">Formularz Ekspozycji</h5>
-                    </div>
-                </div>
-            </a>
-        </div>
-    </div>
-    <div class="row">
-        <div class="col-md-4 mb-3">
-            <a href="{% url 'produkty:klienci' %}" class="card-link">
-                <div class="card nav-card">
-                    <div class="card-body text-center">
-                        <h5 class="card-title">Licznik Klientów</h5>
-                        <p class="card-text">Dzisiaj: {{ licznik_klientow }}</p>
-                    </div>
-                </div>
-            </a>
-        </div>
-        <div class="col-md-4 mb-3">
-            <a href="{% url 'produkty:zadaniowki_management' %}" class="card-link">
-                <div class="card nav-card">
-                    <div class="card-body text-center">
-                        <h5 class="card-title">Zarządzanie Zadaniówkami</h5>
-                    </div>
-                </div>
-            </a>
         </div>
     </div>
 </div>
@@ -126,6 +127,11 @@ Strona Główna
     color: white;
 }
 
+.summary-card-alt {
+    background-color: #3498db;
+    color: white;
+}
+
 .card:hover {
     transform: translateY(-5px);
 }
@@ -143,6 +149,11 @@ Strona Główna
     margin: 0;
     font-size: 1.1rem;
     font-weight: 500;
+}
+
+.small-title {
+    font-size: 0.9rem;
+    margin: 0;
 }
 
 .amount {
