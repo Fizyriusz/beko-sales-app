@@ -22,4 +22,5 @@ urlpatterns = [
     path('ekspozycja-export/', views.eksportuj_ekspozycje_xlsx, name='ekspozycja_export'),
     path('klienci/', views.klienci, name='klienci'),
     path('klienci/zmien/<str:operacja>/', views.zmien_licznik, name='zmien_licznik'),
+    path('import/delete-all/', views.delete_all_models, name='delete_all_models'),
 ]

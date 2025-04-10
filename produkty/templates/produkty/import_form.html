@@ -12,5 +12,13 @@
 
     <br><br>
 
+    <h3>Usuwanie wszystkich modeli</h3>
+    <form method="post" action="{% url 'produkty:delete_all_models' %}" onsubmit="return confirm('Czy na pewno chcesz usunąć wszystkie modele? Tej operacji nie można cofnąć!');">
+        {% csrf_token %}
+        <button type="submit" class="btn btn-danger">Usuń wszystkie modele</button>
+    </form>
+
+    <br><br>
+
     <a href="{% url 'produkty:home' %}">Wróć do strony głównej</a>
 {% endblock %}

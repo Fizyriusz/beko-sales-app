@@ -585,3 +585,13 @@ def eksportuj_ekspozycje_xlsx(request):
     response['Content-Disposition'] = 'attachment; filename=ekspozycja.xlsx'
     
     return response
+
+@login_required
+def delete_all_models(request):
+    if request.method == 'POST':
+        # Usuwanie wszystkich produktów
+        Produkt.objects.all().delete()
+        return render(request, 'produkty/import_success.html', {'message': 'Wszystkie modele zostały usunięte.'})
+    
+    # Jeśli nie jest to POST, przekieruj na stronę importu
+    return redirect('produkty:import_excel')
