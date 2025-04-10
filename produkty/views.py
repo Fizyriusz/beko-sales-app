@@ -69,11 +69,16 @@ def import_excel(request):
         sheet = wb.active
 
         for idx, row in enumerate(sheet.iter_rows(min_row=2, values_only=True), start=2):
-            grupa_towarowa, marka, model, stawka, dystrybucja, *rest = row
+            # Nowy format: A-grupa_towarowa, B-marka (BRAND), C-model, D-stawka
+            if len(row) < 4:
+                logger.warning(f"Wiersz {idx} pominięty - niewystarczająca liczba kolumn.")
+                continue
+
+            grupa_towarowa, marka, model, stawka = row[0], row[1], row[2], row[3]
 
             # Pomijamy wiersze, w których brakuje kluczowych danych
-            if not model or not dystrybucja or dystrybucja != 'TERG':
-                logger.warning(f"Wiersz {idx} pominięty - brak modelu lub nieodpowiednia dystrybucja.")
+            if not model:
+                logger.warning(f"Wiersz {idx} pominięty - brak modelu.")
                 continue
 
             try:
@@ -93,7 +98,7 @@ def import_excel(request):
                     defaults={
                         'stawka': stawka,
                         'grupa_towarowa': grupa_towarowa or 'Nieznana',
-                        'marka': marka or 'Nieznana'  # Dodajemy nową markę
+                        'marka': marka or 'Nieznana'
                     }
                 )
             except Exception as e:
@@ -595,3 +600,94 @@ def delete_all_models(request):
     
     # Jeśli nie jest to POST, przekieruj na stronę importu
     return redirect('produkty:import_excel')
+
+@login_required
+def zadaniowki_management(request):
+    """Widok do zarządzania zadaniówkami"""
+    zadaniowki = Task.objects.all().order_by('-data_od')
+    return render(request, 'produkty/zadaniowki_management.html', {'zadaniowki': zadaniowki})
+
+@login_required
+def zadaniowka_dodaj(request):
+    """Widok do dodawania nowej zadaniówki"""
+    if request.method == 'POST':
+        nazwa = request.POST.get('nazwa')
+        opis = request.POST.get('opis', '')
+        minimalna_liczba_sztuk = int(request.POST.get('minimalna_liczba_sztuk', 0))
+        premia_za_minimalna_liczbe = Decimal(request.POST.get('premia_za_minimalna_liczbe', 0))
+        premia_za_dodatkowa_liczbe = Decimal(request.POST.get('premia_za_dodatkowa_liczbe', 0))
+        mnoznik_stawki = Decimal(request.POST.get('mnoznik_stawki', 1.0))
+        data_od = request.POST.get('data_od')
+        data_do = request.POST.get('data_do')
+        
+        # Tworzenie nowej zadaniówki
+        zadaniowka = Task.objects.create(
+            nazwa=nazwa,
+            opis=opis,
+            minimalna_liczba_sztuk=minimalna_liczba_sztuk,
+            premia_za_minimalna_liczbe=premia_za_minimalna_liczbe,
+            premia_za_dodatkowa_liczbe=premia_za_dodatkowa_liczbe,
+            mnoznik_stawki=mnoznik_stawki,
+            data_od=data_od,
+            data_do=data_do
+        )
+        
+        # Obsługa wybranych produktów
+        wybrane_produkty = request.POST.getlist('produkty')
+        for produkt_id in wybrane_produkty:
+            produkt = get_object_or_404(Produkt, id=produkt_id)
+            zadaniowka.produkty.add(produkt)
+        
+        return redirect('produkty:zadaniowki_management')
+    
+    # Jeśli metoda GET, wyświetl formularz
+    produkty = Produkt.objects.all().order_by('marka', 'model')
+    return render(request, 'produkty/zadaniowka_form.html', {'produkty': produkty})
+
+@login_required
+def zadaniowka_edytuj(request, zadaniowka_id):
+    """Widok do edycji istniejącej zadaniówki"""
+    zadaniowka = get_object_or_404(Task, id=zadaniowka_id)
+    
+    if request.method == 'POST':
+        zadaniowka.nazwa = request.POST.get('nazwa')
+        zadaniowka.opis = request.POST.get('opis', '')
+        zadaniowka.minimalna_liczba_sztuk = int(request.POST.get('minimalna_liczba_sztuk', 0))
+        zadaniowka.premia_za_minimalna_liczbe = Decimal(request.POST.get('premia_za_minimalna_liczbe', 0))
+        zadaniowka.premia_za_dodatkowa_liczbe = Decimal(request.POST.get('premia_za_dodatkowa_liczbe', 0))
+        zadaniowka.mnoznik_stawki = Decimal(request.POST.get('mnoznik_stawki', 1.0))
+        zadaniowka.data_od = request.POST.get('data_od')
+        zadaniowka.data_do = request.POST.get('data_do')
+        
+        # Aktualizacja produktów
+        zadaniowka.produkty.clear()
+        wybrane_produkty = request.POST.getlist('produkty')
+        for produkt_id in wybrane_produkty:
+            produkt = get_object_or_404(Produkt, id=produkt_id)
+            zadaniowka.produkty.add(produkt)
+        
+        zadaniowka.save()
+        return redirect('produkty:zadaniowki_management')
+    
+    # Jeśli metoda GET, wyświetl formularz z danymi
+    produkty = Produkt.objects.all().order_by('marka', 'model')
+    wybrane_produkty = zadaniowka.produkty.all().values_list('id', flat=True)
+    
+    context = {
+        'zadaniowka': zadaniowka,
+        'produkty': produkty,
+        'wybrane_produkty': list(wybrane_produkty)
+    }
+    
+    return render(request, 'produkty/zadaniowka_form.html', context)
+
+@login_required
+def zadaniowka_usun(request, zadaniowka_id):
+    """Widok do usuwania zadaniówki"""
+    zadaniowka = get_object_or_404(Task, id=zadaniowka_id)
+    
+    if request.method == 'POST':
+        zadaniowka.delete()
+        return redirect('produkty:zadaniowki_management')
+    
+    return render(request, 'produkty/zadaniowka_usun.html', {'zadaniowka': zadaniowka})

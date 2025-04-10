@@ -23,4 +23,10 @@ urlpatterns = [
     path('klienci/', views.klienci, name='klienci'),
     path('klienci/zmien/<str:operacja>/', views.zmien_licznik, name='zmien_licznik'),
     path('import/delete-all/', views.delete_all_models, name='delete_all_models'),
+    
+    # Zarządzanie zadaniówkami
+    path('zadaniowki-management/', views.zadaniowki_management, name='zadaniowki_management'),
+    path('zadaniowki-management/dodaj/', views.zadaniowka_dodaj, name='zadaniowka_dodaj'),
+    path('zadaniowki-management/edytuj/<int:zadaniowka_id>/', views.zadaniowka_edytuj, name='zadaniowka_edytuj'),
+    path('zadaniowki-management/usun/<int:zadaniowka_id>/', views.zadaniowka_usun, name='zadaniowka_usun'),
 ]
