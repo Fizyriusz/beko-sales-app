@@ -1,6 +1,8 @@
 from django.shortcuts import render, redirect, get_object_or_404
 from .models import Produkt, Sprzedaz, Task, Ekspozycja, GrupaProduktowa, Marka, KlientCounter
 import openpyxl
+from openpyxl.utils.exceptions import InvalidFileException
+from zipfile import BadZipFile
 from decimal import Decimal, InvalidOperation
 import logging
 from django.utils import timezone
@@ -65,8 +67,19 @@ logger = logging.getLogger(__name__)
 def import_excel(request):
     if request.method == 'POST' and 'file' in request.FILES:
         excel_file = request.FILES['file']
-        wb = openpyxl.load_workbook(excel_file)
-        sheet = wb.active
+        try:
+            wb = openpyxl.load_workbook(excel_file)
+            sheet = wb.active
+        except (InvalidFileException, BadZipFile) as e:
+            logger.error(f"Nieprawidłowy plik Excel: {e}")
+            return render(request, 'produkty/import_form.html', {
+                'error': 'Nieprawidłowy plik Excel. Upewnij się, że przesyłasz prawidłowy plik.'
+            })
+        except Exception as e:
+            logger.error(f"Nieoczekiwany błąd podczas wczytywania pliku: {e}")
+            return render(request, 'produkty/import_form.html', {
+                'error': 'Wystąpił błąd podczas przetwarzania pliku.'
+            })
 
         for idx, row in enumerate(sheet.iter_rows(min_row=2, values_only=True), start=2):
             # Nowy format: A-grupa_towarowa, B-marka (BRAND), C-model, D-stawka
