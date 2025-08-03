@@ -63,7 +63,7 @@ logger = logging.getLogger(__name__)
 
 @login_required
 def import_excel(request):
-    if request.method == 'POST' and request.FILES['file']:
+    if request.method == 'POST' and 'file' in request.FILES:
         excel_file = request.FILES['file']
         wb = openpyxl.load_workbook(excel_file)
         sheet = wb.active
@@ -103,8 +103,11 @@ def import_excel(request):
                 )
             except Exception as e:
                 logger.error(f"Błąd podczas tworzenia produktu w wierszu {idx}: {e}")
-        
+
         return render(request, 'produkty/import_success.html')
+    elif request.method == 'POST':
+        # Brak pliku w żądaniu POST
+        return render(request, 'produkty/import_form.html', {'error': 'Nie wybrano pliku do importu.'})
 
     return render(request, 'produkty/import_form.html')
 
