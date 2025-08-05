@@ -126,49 +126,47 @@ def import_excel(request):
 
 logger = logging.getLogger(__name__)
 
+
+def _zapisz_sprzedaz_i_zadania(zatwierdzone_modele, data_sprzedazy):
+    for model in zatwierdzone_modele:
+        produkt, _ = Produkt.objects.get_or_create(
+            model=model,
+            defaults={'stawka': 0, 'grupa_towarowa': 'NIEZNANA'}
+        )
+        sprzedaz = Sprzedaz.objects.create(
+            produkt=produkt,
+            data_sprzedazy=data_sprzedazy,
+            liczba_sztuk=1
+        )
+
+        wszystkie_zadania = Task.objects.filter(data_od__lte=data_sprzedazy, data_do__gte=data_sprzedazy)
+        for zadanie in wszystkie_zadania:
+            if produkt in zadanie.produkty.all():
+                sprzedane = Sprzedaz.objects.filter(
+                    produkt__in=zadanie.produkty.all(),
+                    data_sprzedazy__range=[zadanie.data_od, zadanie.data_do]
+                ).aggregate(models.Sum('liczba_sztuk'))['liczba_sztuk__sum'] or 0
+
+                if sprzedane >= zadanie.minimalna_liczba_sztuk:
+                    sprzedaz.prowizja = produkt.stawka * zadanie.mnoznik_stawki
+                    sprzedaz.save()
+
+
 @login_required
 def sprzedaz(request):
     if request.method == 'POST':
-        # Obsługa zatwierdzenia sugestii
         if 'sugestie_zatwierdzone' in request.POST:
             data_sprzedazy = request.POST.get('data_sprzedazy')
 
-            # Przetwarzanie modeli, które użytkownik zatwierdził
-            modele = []
+            zatwierdzone_modele = []
             for key in request.POST:
                 if key.startswith('model_'):
                     model = request.POST[key].strip().upper()
-                    modele.append(model)
+                    zatwierdzone_modele.append(model)
 
-            for model in modele:
-                produkt, created = Produkt.objects.get_or_create(
-                    model=model,
-                    defaults={'stawka': 0, 'grupa_towarowa': 'NIEZNANA'}
-                )
-                sprzedaz = Sprzedaz.objects.create(
-                    produkt=produkt,
-                    data_sprzedazy=data_sprzedazy,
-                    liczba_sztuk=1
-                )
-
-                # Sprawdź, czy produkt pasuje do jakiegoś zadania
-                wszystkie_zadania = Task.objects.filter(data_od__lte=data_sprzedazy, data_do__gte=data_sprzedazy)
-                for zadanie in wszystkie_zadania:
-                    if produkt in zadanie.produkty.all():
-                        # Oblicz liczbę sprzedanych produktów dla zadania
-                        sprzedane = Sprzedaz.objects.filter(
-                            produkt__in=zadanie.produkty.all(),
-                            data_sprzedazy__range=[zadanie.data_od, zadanie.data_do]
-                        ).aggregate(models.Sum('liczba_sztuk'))['liczba_sztuk__sum'] or 0
-
-                        # Jeśli spełniono warunek minimalnej liczby sztuk, zastosuj mnożnik stawki
-                        if sprzedane >= zadanie.minimalna_liczba_sztuk:
-                            sprzedaz.prowizja = produkt.stawka * zadanie.mnoznik_stawki
-                            sprzedaz.save()
-
+            _zapisz_sprzedaz_i_zadania(zatwierdzone_modele, data_sprzedazy)
             return redirect('produkty:sprzedaz_sukces')
 
-        # Obsługa wprowadzenia nowych modeli sprzedaży
         data_sprzedazy = request.POST.get('data_sprzedazy')
         modele_sprzedazy = request.POST.get('modele_sprzedazy')
 
@@ -184,63 +182,18 @@ def sprzedaz(request):
 
         for model in modele:
             if model in wszystkie_modele:
-                # Jeśli model istnieje w bazie, zapisz sprzedaż
-                produkt = Produkt.objects.get(model=model)
-                sprzedaz = Sprzedaz.objects.create(
-                    produkt=produkt,
-                    data_sprzedazy=data_sprzedazy,
-                    liczba_sztuk=1
-                )
                 zatwierdzone_modele.append(model)
-
-                # Sprawdź, czy produkt pasuje do jakiegoś zadania
-                wszystkie_zadania = Task.objects.filter(data_od__lte=data_sprzedazy, data_do__gte=data_sprzedazy)
-                for zadanie in wszystkie_zadania:
-                    if produkt in zadanie.produkty.all():
-                        # Oblicz liczbę sprzedanych produktów dla zadania
-                        sprzedane = Sprzedaz.objects.filter(
-                            produkt__in=zadanie.produkty.all(),
-                            data_sprzedazy__range=[zadanie.data_od, zadanie.data_do]
-                        ).aggregate(models.Sum('liczba_sztuk'))['liczba_sztuk__sum'] or 0
-
-                        # Jeśli spełniono warunek minimalnej liczby sztuk, zastosuj mnożnik stawki
-                        if sprzedane >= zadanie.minimalna_liczba_sztuk:
-                            sprzedaz.prowizja = produkt.stawka * zadanie.mnoznik_stawki
-                            sprzedaz.save()
             else:
-                # Jeśli model nie istnieje, znajdź najbardziej podobny model
                 najlepszy_wynik = process.extractOne(model, wszystkie_modele, scorer=fuzz.ratio)
-                if najlepszy_wynik and najlepszy_wynik[1] > 80:  # Próg podobieństwa, który można dostosować
+                if najlepszy_wynik and najlepszy_wynik[1] > 80:
                     sugestie.append((model, najlepszy_wynik[0]))
                 else:
-                    # Jeśli nie znaleziono dobrego dopasowania, dodaj nowy produkt z domyślną stawką 0
-                    produkt, created = Produkt.objects.get_or_create(
+                    Produkt.objects.get_or_create(
                         model=model,
                         defaults={'stawka': 0, 'grupa_towarowa': 'NIEZNANA'}
                     )
-                    sprzedaz = Sprzedaz.objects.create(
-                        produkt=produkt,
-                        data_sprzedazy=data_sprzedazy,
-                        liczba_sztuk=1
-                    )
                     zatwierdzone_modele.append(model)
 
-                    # Sprawdź, czy produkt pasuje do jakiegoś zadania
-                    wszystkie_zadania = Task.objects.filter(data_od__lte=data_sprzedazy, data_do__gte=data_sprzedazy)
-                    for zadanie in wszystkie_zadania:
-                        if produkt in zadanie.produkty.all():
-                            # Oblicz liczbę sprzedanych produktów dla zadania
-                            sprzedane = Sprzedaz.objects.filter(
-                                produkt__in=zadanie.produkty.all(),
-                                data_sprzedazy__range=[zadanie.data_od, zadanie.data_do]
-                            ).aggregate(models.Sum('liczba_sztuk'))['liczba_sztuk__sum'] or 0
-
-                            # Jeśli spełniono warunek minimalnej liczby sztuk, zastosuj mnożnik stawki
-                            if sprzedane >= zadanie.minimalna_liczba_sztuk:
-                                sprzedaz.prowizja = produkt.stawka * zadanie.mnoznik_stawki
-                                sprzedaz.save()
-
-        # Jeśli są sugestie, wyświetl je w formularzu
         if sugestie:
             context = {
                 'sugestie': sugestie,
@@ -249,6 +202,7 @@ def sprzedaz(request):
             }
             return render(request, 'produkty/sprzedaz_sugestie.html', context)
 
+        _zapisz_sprzedaz_i_zadania(zatwierdzone_modele, data_sprzedazy)
         return redirect('produkty:sprzedaz_sukces')
 
     return render(request, 'produkty/sprzedaz.html')
