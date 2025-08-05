@@ -8,20 +8,23 @@
         {% csrf_token %}
         <input type="hidden" name="sugestie_zatwierdzone" value="1">
         <input type="hidden" name="data_sprzedazy" value="{{ data_sprzedazy }}">
-        {% for model in zatwierdzone_modele %}
-            <input type="hidden" name="model_{{ forloop.counter }}" value="{{ model }}">
-        {% endfor %}
-        <p>Data sprzedaży: {{ data_sprzedazy }}</p>
-        <ul>
-            {% for wpis, sugestia in sugestie %}
-                <li>
-                    Nieznany model: <strong>{{ wpis }}</strong><br>
-                    Czy chodziło Ci o: <strong>{{ sugestia }}</strong>?
-                    <input type="radio" name="model_{{ forloop.counter }}" value="{{ sugestia }}"> Tak
-                    <input type="radio" name="model_{{ forloop.counter }}" value="{{ wpis }}"> Nie, użyj oryginału
-                </li>
+        {% with offset=zatwierdzone_modele|length %}
+            {% for model in zatwierdzone_modele %}
+                <input type="hidden" name="model_{{ forloop.counter }}" value="{{ model }}">
             {% endfor %}
-        </ul>
+            <p>Data sprzedaży: {{ data_sprzedazy }}</p>
+            <ul>
+                {% for wpis, sugestia in sugestie %}
+                    <li>
+                        Nieznany model: <strong>{{ wpis }}</strong><br>
+                        Czy chodziło Ci o: <strong>{{ sugestia }}</strong>?
+                        <input type="radio" name="model_{{ forloop.counter|add:offset }}" value="{{ sugestia }}"> Tak
+                        <input type="radio" name="model_{{ forloop.counter|add:offset }}" value="{{ wpis }}"> Nie, użyj oryginału
+                    </li>
+                {% endfor %}
+            </ul>
+        {% endwith %}
         <button type="submit">Zatwierdź sprzedaż</button>
     </form>
 {% endblock %}
+
