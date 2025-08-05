@@ -47,3 +47,41 @@ class SprzedazSugestieTestCase(TestCase):
         models_in_summary = [d["model"] for d in summary.context["sprzedaz"].values()]
         self.assertIn("ABC123", models_in_summary)
 
+    def test_unique_models_no_duplicates(self):
+        Produkt.objects.create(model="ABC123", stawka=10, grupa_towarowa="AGD")
+        Produkt.objects.create(model="XYZ789", stawka=5, grupa_towarowa="AGD")
+
+        data_sprzedazy = "2024-01-01"
+
+        response = self.client.post(
+            reverse("produkty:sprzedaz"),
+            {
+                "data_sprzedazy": data_sprzedazy,
+                "modele_sprzedazy": "ABC123\nXYZ788\nNEWMODEL",
+            },
+        )
+
+        self.assertTemplateUsed(response, "produkty/sprzedaz_sugestie.html")
+
+        response = self.client.post(
+            reverse("produkty:sprzedaz"),
+            {
+                "sugestie_zatwierdzone": "1",
+                "data_sprzedazy": data_sprzedazy,
+                "model_1": "ABC123",
+                "model_2": "NEWMODEL",
+                "model_3": "XYZ789",
+            },
+        )
+
+        self.assertEqual(response.status_code, 302)
+
+        unique_models = {"ABC123", "NEWMODEL", "XYZ789"}
+        self.assertEqual(Sprzedaz.objects.count(), len(unique_models))
+
+        summary = self.client.get(reverse("produkty:podsumowanie_sprzedazy"))
+        models_in_summary = [d["model"] for d in summary.context["sprzedaz"].values()]
+
+        self.assertEqual(len(models_in_summary), len(unique_models))
+        self.assertEqual(len(set(models_in_summary)), len(unique_models))
+
