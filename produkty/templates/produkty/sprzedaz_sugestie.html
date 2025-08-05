@@ -6,6 +6,11 @@
     <h1>Sugestie dla nieznanych modeli</h1>
     <form method="post">
         {% csrf_token %}
+        <input type="hidden" name="sugestie_zatwierdzone" value="1">
+        <input type="hidden" name="data_sprzedazy" value="{{ data_sprzedazy }}">
+        {% for model in zatwierdzone_modele %}
+            <input type="hidden" name="model_{{ forloop.counter }}" value="{{ model }}">
+        {% endfor %}
         <p>Data sprzedaży: {{ data_sprzedazy }}</p>
         <ul>
             {% for wpis, sugestia in sugestie %}
