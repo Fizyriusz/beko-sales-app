@@ -218,6 +218,7 @@ def podsumowanie_sprzedazy(request):
     data_do = request.GET.get('data_do')
     produkt = request.GET.get('produkt')
     marka = request.GET.get('marka')
+    task_type = request.GET.get('task_type')
 
     # Tworzenie podstawowego zapytania do modelu Sprzedaz
     sprzedaz = Sprzedaz.objects.all()
@@ -246,29 +247,54 @@ def podsumowanie_sprzedazy(request):
         marka = item.produkt.marka
         stawka = item.produkt.stawka
 
-        # Sprawdź, czy produkt pasuje do aktywnego zadania i uwzględnij mnożnik stawki
-        mnoznik = 1
-        for zadanie in aktywne_zadania:
-            if item.produkt in zadanie.produkty.all():
-                mnoznik = zadanie.mnoznik_stawki
-                break
-
-        # Zastosuj mnożnik do stawki
-        rzeczywista_stawka = stawka * mnoznik
+        if task_type == 'multiplier':
+            for zadanie in aktywne_zadania.filter(mnoznik_stawki__gt=1):
+                if item.produkt in zadanie.produkty.all():
+                    stawka *= zadanie.mnoznik_stawki
+                    break
+        elif task_type == 'specific':
+            for zadanie in aktywne_zadania.filter(premia_za_dodatkowa_liczbe__gt=0):
+                if item.produkt in zadanie.produkty.all():
+                    stawka += zadanie.premia_za_dodatkowa_liczbe
+                    break
 
         klucz = f"{marka}_{model}"  # Używamy string jako klucz zamiast krotki
-        
+
         if klucz not in sprzedaz_podsumowanie:
             sprzedaz_podsumowanie[klucz] = {
                 'marka': marka,
                 'model': model,
                 'liczba_sztuk': 0,
-                'stawka': rzeczywista_stawka,
+                'stawka': stawka,
                 'suma_prowizji': 0
             }
-        
+
         sprzedaz_podsumowanie[klucz]['liczba_sztuk'] += item.liczba_sztuk
-        sprzedaz_podsumowanie[klucz]['suma_prowizji'] += rzeczywista_stawka * item.liczba_sztuk
+        sprzedaz_podsumowanie[klucz]['suma_prowizji'] += stawka * item.liczba_sztuk
+
+    task_rewards = []
+    if task_type == 'commission':
+        for zadanie in aktywne_zadania.filter(premia_za_minimalna_liczbe__gt=0):
+            sprzedane = (
+                Sprzedaz.objects.filter(
+                    produkt__in=zadanie.produkty.all(),
+                    data_sprzedazy__range=[zadanie.data_od, zadanie.data_do],
+                ).aggregate(Sum('liczba_sztuk'))['liczba_sztuk__sum']
+                or 0
+            )
+            premia = Decimal('0')
+            if sprzedane >= zadanie.minimalna_liczba_sztuk:
+                premia = zadanie.premia_za_minimalna_liczbe
+                dodatkowe = sprzedane - zadanie.minimalna_liczba_sztuk
+                if zadanie.premia_za_dodatkowa_liczbe:
+                    premia += dodatkowe * zadanie.premia_za_dodatkowa_liczbe
+            task_rewards.append(
+                {
+                    'nazwa': zadanie.nazwa,
+                    'sprzedane': sprzedane,
+                    'premia': premia,
+                }
+            )
 
     # Obliczanie sumarycznych wartości dla wszystkich sprzedaży
     liczba_sztuk = sum(item['liczba_sztuk'] for item in sprzedaz_podsumowanie.values())
@@ -278,6 +304,8 @@ def podsumowanie_sprzedazy(request):
         'sprzedaz': sprzedaz_podsumowanie,
         'liczba_sztuk': liczba_sztuk,
         'calkowita_prowizja': calkowita_prowizja,
+        'task_rewards': task_rewards,
+        'task_type': task_type,
     }
 
     return render(request, 'produkty/podsumowanie_sprzedazy.html', context)
