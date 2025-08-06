@@ -2,6 +2,7 @@ from django.contrib.auth.models import User
 from django.test import Client, TestCase, override_settings
 from django.urls import reverse
 
+from .forms import TaskForm
 from .models import Produkt, Sprzedaz
 
 
@@ -84,4 +85,29 @@ class SprzedazSugestieTestCase(TestCase):
 
         self.assertEqual(len(models_in_summary), len(unique_models))
         self.assertEqual(len(set(models_in_summary)), len(unique_models))
+        
 
+@override_settings(
+    DATABASES={"default": {"ENGINE": "django.db.backends.sqlite3", "NAME": ":memory:"}}
+)
+class TaskFormValidationTestCase(TestCase):
+    def test_end_date_before_start_date(self):
+        produkt = Produkt.objects.create(
+            model="TF123", stawka=10, grupa_towarowa="AGD"
+        )
+        form = TaskForm(
+            data={
+                "nazwa": "Test Task",
+                "minimalna_liczba_sztuk": 1,
+                "produkty": [produkt.id],
+                "mnoznik_stawki": 1,
+                "data_od": "2024-02-01",
+                "data_do": "2024-01-01",
+            }
+        )
+
+        self.assertFalse(form.is_valid())
+        self.assertIn(
+            "Data zakończenia nie może być wcześniejsza niż data rozpoczęcia.",
+            form.errors["__all__"],
+        )
