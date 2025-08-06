@@ -1,8 +1,9 @@
 from django.contrib.auth.models import User
 from django.test import Client, TestCase, override_settings
 from django.urls import reverse
+from decimal import Decimal
 
-from .models import Produkt, Sprzedaz
+from .models import Produkt, Sprzedaz, Task
 
 
 @override_settings(
@@ -85,3 +86,64 @@ class SprzedazSugestieTestCase(TestCase):
         self.assertEqual(len(models_in_summary), len(unique_models))
         self.assertEqual(len(set(models_in_summary)), len(unique_models))
 
+
+@override_settings(
+    DATABASES={"default": {"ENGINE": "django.db.backends.sqlite3", "NAME": ":memory:"}}
+)
+class TaskTypeTestCase(TestCase):
+    def setUp(self):
+        self.user = User.objects.create_user(username="taskuser", password="pass")
+        self.client = Client()
+        self.client.login(username="taskuser", password="pass")
+
+    def test_create_mix_prowizja_task(self):
+        response = self.client.post(
+            reverse("produkty:zadaniowka_dodaj"),
+            {
+                "nazwa": "Mix prowizja",
+                "typ": "MIX_PROWIZJA",
+                "prog_mix": 5,
+                "premia_za_minimalna_liczbe": "10",
+                "data_od": "2024-01-01",
+                "data_do": "2024-01-31",
+                "mnoznik_stawki": "1.0",
+            },
+        )
+        self.assertEqual(response.status_code, 302)
+        task = Task.objects.get(nazwa="Mix prowizja")
+        self.assertEqual(task.typ, Task.Typ.MIX_PROWIZJA)
+        self.assertEqual(task.prog_mix, 5)
+
+    def test_create_mix_mnoznik_task(self):
+        response = self.client.post(
+            reverse("produkty:zadaniowka_dodaj"),
+            {
+                "nazwa": "Mix mnoznik",
+                "typ": "MIX_MNOZNIK",
+                "prog_mix": 3,
+                "mnoznik_mix": "1.5",
+                "data_od": "2024-01-01",
+                "data_do": "2024-01-31",
+                "mnoznik_stawki": "1.0",
+            },
+        )
+        self.assertEqual(response.status_code, 302)
+        task = Task.objects.get(nazwa="Mix mnoznik")
+        self.assertEqual(task.typ, Task.Typ.MIX_MNOZNIK)
+        self.assertEqual(task.mnoznik_mix, Decimal("1.5"))
+
+    def test_create_konkretne_modele_task(self):
+        response = self.client.post(
+            reverse("produkty:zadaniowka_dodaj"),
+            {
+                "nazwa": "Konkretne modele",
+                "typ": "KONKRETNE_MODELE",
+                "minimalna_liczba_sztuk": 2,
+                "data_od": "2024-01-01",
+                "data_do": "2024-01-31",
+                "mnoznik_stawki": "1.0",
+            },
+        )
+        self.assertEqual(response.status_code, 302)
+        task = Task.objects.get(nazwa="Konkretne modele")
+        self.assertEqual(task.typ, Task.Typ.KONKRETNE_MODELE)

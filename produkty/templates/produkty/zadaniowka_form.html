@@ -16,37 +16,58 @@
                 <label for="nazwa" class="form-label">Nazwa zadaniówki</label>
                 <input type="text" class="form-control" id="nazwa" name="nazwa" value="{{ zadaniowka.nazwa|default:'' }}" required>
             </div>
-            
+
+            <div class="col-md-6 mb-3">
+                <label for="typ" class="form-label">Typ zadaniówki</label>
+                <select class="form-select" id="typ" name="typ">
+                    <option value="MIX_PROWIZJA" {% if zadaniowka.typ == 'MIX_PROWIZJA' %}selected{% endif %}>Mix prowizja</option>
+                    <option value="MIX_MNOZNIK" {% if zadaniowka.typ == 'MIX_MNOZNIK' %}selected{% endif %}>Mix mnożnik</option>
+                    <option value="KONKRETNE_MODELE" {% if zadaniowka.typ == 'KONKRETNE_MODELE' or not zadaniowka %}selected{% endif %}>Konkretne modele</option>
+                </select>
+            </div>
+        </div>
+
+        <div class="row">
             <div class="col-md-6 mb-3">
                 <label for="minimalna_liczba_sztuk" class="form-label">Minimalna liczba sztuk</label>
                 <input type="number" class="form-control" id="minimalna_liczba_sztuk" name="minimalna_liczba_sztuk" value="{{ zadaniowka.minimalna_liczba_sztuk|default:'0' }}" min="0">
             </div>
+
+            <div class="col-md-6 mb-3">
+                <label for="prog_mix" class="form-label">Próg mixu</label>
+                <input type="number" class="form-control" id="prog_mix" name="prog_mix" value="{{ zadaniowka.prog_mix|default:'0' }}" min="0">
+            </div>
         </div>
-        
+
         <div class="row">
             <div class="col-md-6 mb-3">
                 <label for="data_od" class="form-label">Data rozpoczęcia</label>
                 <input type="date" class="form-control" id="data_od" name="data_od" value="{{ zadaniowka.data_od|date:'Y-m-d'|default:'' }}" required>
             </div>
-            
+
             <div class="col-md-6 mb-3">
                 <label for="data_do" class="form-label">Data zakończenia</label>
                 <input type="date" class="form-control" id="data_do" name="data_do" value="{{ zadaniowka.data_do|date:'Y-m-d'|default:'' }}" required>
             </div>
         </div>
-        
+
         <div class="row">
-            <div class="col-md-4 mb-3">
+            <div class="col-md-3 mb-3">
                 <label for="mnoznik_stawki" class="form-label">Mnożnik stawki</label>
                 <input type="number" class="form-control" id="mnoznik_stawki" name="mnoznik_stawki" value="{{ zadaniowka.mnoznik_stawki|default:'1.0' }}" step="0.01" min="0">
             </div>
-            
-            <div class="col-md-4 mb-3">
+
+            <div class="col-md-3 mb-3">
+                <label for="mnoznik_mix" class="form-label">Mnożnik mixu</label>
+                <input type="number" class="form-control" id="mnoznik_mix" name="mnoznik_mix" value="{{ zadaniowka.mnoznik_mix|default:'' }}" step="0.01" min="0">
+            </div>
+
+            <div class="col-md-3 mb-3">
                 <label for="premia_za_minimalna_liczbe" class="form-label">Premia za min. liczbę</label>
                 <input type="number" class="form-control" id="premia_za_minimalna_liczbe" name="premia_za_minimalna_liczbe" value="{{ zadaniowka.premia_za_minimalna_liczbe|default:'0' }}" step="0.01" min="0">
             </div>
-            
-            <div class="col-md-4 mb-3">
+
+            <div class="col-md-3 mb-3">
                 <label for="premia_za_dodatkowa_liczbe" class="form-label">Premia za dodatkową</label>
                 <input type="number" class="form-control" id="premia_za_dodatkowa_liczbe" name="premia_za_dodatkowa_liczbe" value="{{ zadaniowka.premia_za_dodatkowa_liczbe|default:'0' }}" step="0.01" min="0">
             </div>
