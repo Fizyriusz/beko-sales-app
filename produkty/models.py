@@ -10,8 +10,16 @@ class Produkt(models.Model):
         return f"{self.marka} - {self.model}"
 
 class Task(models.Model):
+    class Typ(models.TextChoices):
+        MIX_PROWIZJA = "MIX_PROWIZJA", "Mix prowizja"
+        MIX_MNOZNIK = "MIX_MNOZNIK", "Mix mnożnik"
+        KONKRETNE_MODELE = "KONKRETNE_MODELE", "Konkretne modele"
+
     nazwa = models.CharField(max_length=255)
     opis = models.TextField(blank=True)
+    typ = models.CharField(max_length=20, choices=Typ.choices, default=Typ.KONKRETNE_MODELE)
+    prog_mix = models.PositiveIntegerField(null=True, blank=True, help_text="Próg dla zadań typu mix")
+    mnoznik_mix = models.DecimalField(max_digits=4, decimal_places=2, null=True, blank=True, help_text="Mnożnik dla zadań typu mix")
     minimalna_liczba_sztuk = models.PositiveIntegerField(default=0)
     premia_za_minimalna_liczbe = models.DecimalField(max_digits=10, decimal_places=2, null=True, blank=True)
     premia_za_dodatkowa_liczbe = models.DecimalField(max_digits=10, decimal_places=2, null=True, blank=True)

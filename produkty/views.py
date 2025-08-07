@@ -611,7 +611,12 @@ def zadaniowka_dodaj(request):
     if request.method == 'POST':
         nazwa = request.POST.get('nazwa')
         opis = request.POST.get('opis', '')
+        typ = request.POST.get('typ')
         minimalna_liczba_sztuk = int(request.POST.get('minimalna_liczba_sztuk', 0))
+        prog_mix = request.POST.get('prog_mix')
+        prog_mix = int(prog_mix) if prog_mix else None
+        mnoznik_mix = request.POST.get('mnoznik_mix')
+        mnoznik_mix = Decimal(mnoznik_mix) if mnoznik_mix else None
         premia_za_minimalna_liczbe = Decimal(request.POST.get('premia_za_minimalna_liczbe', 0))
         premia_za_dodatkowa_liczbe = Decimal(request.POST.get('premia_za_dodatkowa_liczbe', 0))
         mnoznik_stawki = Decimal(request.POST.get('mnoznik_stawki', 1.0))
@@ -622,7 +627,10 @@ def zadaniowka_dodaj(request):
         zadaniowka = Task.objects.create(
             nazwa=nazwa,
             opis=opis,
+            typ=typ,
             minimalna_liczba_sztuk=minimalna_liczba_sztuk,
+            prog_mix=prog_mix,
+            mnoznik_mix=mnoznik_mix,
             premia_za_minimalna_liczbe=premia_za_minimalna_liczbe,
             premia_za_dodatkowa_liczbe=premia_za_dodatkowa_liczbe,
             mnoznik_stawki=mnoznik_stawki,
@@ -650,7 +658,12 @@ def zadaniowka_edytuj(request, zadaniowka_id):
     if request.method == 'POST':
         zadaniowka.nazwa = request.POST.get('nazwa')
         zadaniowka.opis = request.POST.get('opis', '')
+        zadaniowka.typ = request.POST.get('typ')
         zadaniowka.minimalna_liczba_sztuk = int(request.POST.get('minimalna_liczba_sztuk', 0))
+        prog_mix = request.POST.get('prog_mix')
+        zadaniowka.prog_mix = int(prog_mix) if prog_mix else None
+        mnoznik_mix = request.POST.get('mnoznik_mix')
+        zadaniowka.mnoznik_mix = Decimal(mnoznik_mix) if mnoznik_mix else None
         zadaniowka.premia_za_minimalna_liczbe = Decimal(request.POST.get('premia_za_minimalna_liczbe', 0))
         zadaniowka.premia_za_dodatkowa_liczbe = Decimal(request.POST.get('premia_za_dodatkowa_liczbe', 0))
         zadaniowka.mnoznik_stawki = Decimal(request.POST.get('mnoznik_stawki', 1.0))
