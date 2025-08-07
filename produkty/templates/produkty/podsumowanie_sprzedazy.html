@@ -41,6 +41,28 @@
     </tbody>
 </table>
 
+{% if task_rewards %}
+<h2>Rozliczenia zadań</h2>
+<table>
+    <thead>
+        <tr>
+            <th>Zadanie</th>
+            <th>Sprzedane sztuki</th>
+            <th>Premia</th>
+        </tr>
+    </thead>
+    <tbody>
+        {% for r in task_rewards %}
+        <tr>
+            <td>{{ r.nazwa }}</td>
+            <td>{{ r.sprzedane }}</td>
+            <td>{{ r.premia }} PLN</td>
+        </tr>
+        {% endfor %}
+    </tbody>
+</table>
+{% endif %}
+
 <h3>Filtruj sprzedaż:</h3>
 <form method="get" action="">
     <label for="data_od">Data od:</label>
@@ -54,6 +76,14 @@
 
     <label for="marka">Marka:</label>
     <input type="text" name="marka" id="marka" placeholder="Wpisz nazwę marki">
+
+    <label for="task_type">Rodzaj zadaniówki:</label>
+    <select name="task_type" id="task_type">
+        <option value="">--Wybierz--</option>
+        <option value="commission" {% if task_type == 'commission' %}selected{% endif %}>Mix-model commission</option>
+        <option value="multiplier" {% if task_type == 'multiplier' %}selected{% endif %}>Mix-model multiplier</option>
+        <option value="specific" {% if task_type == 'specific' %}selected{% endif %}>Specific models</option>
+    </select>
 
     <button type="submit">Filtruj</button>
 </form>
