@@ -82,6 +82,20 @@ body {
     background-color: #1abc9c;
 }
 
+.has-submenu > a {
+    cursor: pointer;
+}
+
+.submenu {
+    display: none;
+    list-style-type: none;
+    padding-left: 15px;
+}
+
+.submenu.open {
+    display: block;
+}
+
 /* Nagłówek w sidebarze */
 
 .sidebar h3 {
