@@ -11,7 +11,7 @@
     integrity="sha384-…"
     crossorigin="anonymous"
   />
-    <link rel="stylesheet" href="{% static 'produkty/style.css' %}?v=5">
+    <link rel="stylesheet" href="{% static 'produkty/style.css' %}?v=6">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <style>
         body {
@@ -115,6 +115,16 @@
         .sidebar ul li a:hover {
             background-color: #34495e;
         }
+        .has-submenu > a {
+            cursor: pointer;
+        }
+        .submenu {
+            display: none;
+            padding-left: 15px;
+        }
+        .submenu.open {
+            display: block;
+        }
         .close-hamburger {
             position: absolute;
             top: 10px;
@@ -145,22 +155,31 @@
             <h3>Nawigacja</h3>
             <ul>
                 <li><a href="{% url 'produkty:home' %}">Strona Główna</a></li>
-                <li><a href="{% url 'produkty:import_excel' %}">Import Produktów</a></li>
                 <li><a href="{% url 'produkty:sprzedaz' %}">Rejestracja Sprzedaży</a></li>
                 <li><a href="{% url 'produkty:podsumowanie_sprzedazy' %}">Podsumowanie Sprzedaży</a></li>
-                <li><a href="{% url 'produkty:wyciagnij_liste_modeli' %}">Wyciągnij Listę Modeli</a></li>
-                <li><a href="{% url 'produkty:lista_zadaniowek' %}">Zadaniowki</a></li>
-                <li><a href="{% url 'produkty:zadaniowki_management' %}">Zarządzanie Zadaniówkami</a></li>
-                <li><a href="{% url 'produkty:ekspozycja_form' grupa_id=1 %}">Formularz Ekspozycji</a></li>
-                <li><a href="{% url 'produkty:ekspozycja_summary' %}" class="list-group-item list-group-item-action">
-                    <i class="fas fa-chart-bar me-2"></i> Podsumowanie ekspozycji
-                </a></li>
-                <li><a href="{% url 'produkty:ekspozycja_export' %}" class="list-group-item list-group-item-action">
-                    <i class="fas fa-file-excel me-2"></i> Eksport ekspozycji do Excel
-                </a></li>
-                <li><a href="{% url 'produkty:klienci' %}" class="list-group-item list-group-item-action">
-                    <i class="fas fa-users me-2"></i> Licznik klientów
-                </a></li>
+                <li class="has-submenu">
+                    <a href="#" class="submenu-toggle">Zadania</a>
+                    <ul class="submenu">
+                        <li><a href="{% url 'produkty:lista_zadaniowek' %}">Zadaniówki</a></li>
+                        <li><a href="{% url 'produkty:zadaniowki_management' %}">Zarządzanie Zadaniówkami</a></li>
+                    </ul>
+                </li>
+                <li class="has-submenu">
+                    <a href="#" class="submenu-toggle">Ekspozycja</a>
+                    <ul class="submenu">
+                        <li><a href="{% url 'produkty:ekspozycja_form' grupa_id=1 %}">Formularz Ekspozycji</a></li>
+                        <li><a href="{% url 'produkty:ekspozycja_summary' %}">Podsumowanie ekspozycji</a></li>
+                        <li><a href="{% url 'produkty:ekspozycja_export' %}">Eksport ekspozycji do Excel</a></li>
+                    </ul>
+                </li>
+                <li class="has-submenu">
+                    <a href="#" class="submenu-toggle">Inne</a>
+                    <ul class="submenu">
+                        <li><a href="{% url 'produkty:import_excel' %}">Import produktów</a></li>
+                        <li><a href="{% url 'produkty:wyciagnij_liste_modeli' %}">Wyciągnij listę modeli</a></li>
+                        <li><a href="{% url 'produkty:klienci' %}">Licznik klientów</a></li>
+                    </ul>
+                </li>
                 {% if user.is_authenticated %}
                 <li><a href="{% url 'logout' %}" class="logout-btn">Wyloguj się</a></li>
                 {% endif %}
@@ -180,7 +199,8 @@
         const sidebar = document.getElementById('sidebar');
         const container = document.getElementById('container');
         const overlay = document.getElementById('overlay');
-        const links = document.querySelectorAll('.sidebar a');
+        const links = document.querySelectorAll('.sidebar a:not(.submenu-toggle)');
+        const submenuToggles = document.querySelectorAll('.submenu-toggle');
         const hamburger = document.querySelector('.hamburger');
         const closeHamburger = document.querySelector('.close-hamburger');
 
@@ -206,6 +226,13 @@
         hamburger.addEventListener('click', toggleSidebar);
         links.forEach(link => {
             link.addEventListener('click', closeSidebar);
+        });
+        submenuToggles.forEach(toggle => {
+            toggle.addEventListener('click', (e) => {
+                e.preventDefault();
+                const submenu = toggle.nextElementSibling;
+                submenu.classList.toggle('open');
+            });
         });
         overlay.addEventListener('click', closeSidebar);
         closeHamburger.addEventListener('click', closeSidebar);
