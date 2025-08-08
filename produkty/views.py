@@ -8,7 +8,7 @@ import logging
 from django.utils import timezone
 from django.db.models import Sum
 from collections import defaultdict
-from datetime import timedelta
+from datetime import timedelta, datetime
 from rapidfuzz import fuzz, process 
 import re
 from django.db import models
@@ -229,6 +229,10 @@ def podsumowanie_sprzedazy(request):
     if data_do:
         sprzedaz = sprzedaz.filter(data_sprzedazy__lte=data_do)
 
+    # Parsowanie dat dla zadań
+    start_date = datetime.strptime(data_od, "%Y-%m-%d").date() if data_od else timezone.now().date()
+    end_date = datetime.strptime(data_do, "%Y-%m-%d").date() if data_do else timezone.now().date()
+
     # Filtracja na podstawie produktu i marki
     if produkt:
         sprzedaz = sprzedaz.filter(produkt__model__icontains=produkt)
@@ -239,21 +243,60 @@ def podsumowanie_sprzedazy(request):
     sprzedaz_podsumowanie = {}
 
     # Pobieranie aktywnych zadań
-    today = timezone.now().date()
-    aktywne_zadania = Task.objects.filter(data_od__lte=today, data_do__gte=today)
+    aktywne_zadania = Task.objects.filter(data_od__lte=end_date, data_do__gte=start_date)
+
+    # Obsługa zadań mix
+    task_rewards = []
+    product_multipliers = {}
+    mix_tasks = aktywne_zadania.filter(typ__in=[Task.Typ.MIX_PROWIZJA, Task.Typ.MIX_MNOZNIK])
+    for zadanie in mix_tasks:
+        zakres_start = max(start_date, zadanie.data_od)
+        zakres_koniec = min(end_date, zadanie.data_do)
+        sprzedane = (
+            Sprzedaz.objects.filter(
+                produkt__in=zadanie.produkty.all(),
+                data_sprzedazy__range=[zakres_start, zakres_koniec],
+            ).aggregate(Sum('liczba_sztuk'))['liczba_sztuk__sum']
+            or 0
+        )
+        prog = zadanie.prog_mix or 0
+        if sprzedane >= prog:
+            if zadanie.typ == Task.Typ.MIX_MNOZNIK and zadanie.mnoznik_mix:
+                for p in zadanie.produkty.all():
+                    product_multipliers[p.id] = product_multipliers.get(p.id, Decimal('1')) * zadanie.mnoznik_mix
+            elif zadanie.typ == Task.Typ.MIX_PROWIZJA:
+                premia = zadanie.premia_za_minimalna_liczbe or Decimal('0')
+                if zadanie.premia_za_dodatkowa_liczbe:
+                    dodatkowe = sprzedane - prog
+                    if dodatkowe > 0:
+                        premia += dodatkowe * zadanie.premia_za_dodatkowa_liczbe
+                task_rewards.append(
+                    {
+                        'nazwa': zadanie.nazwa,
+                        'sprzedane': sprzedane,
+                        'premia': premia,
+                    }
+                )
 
     for item in sprzedaz:
         model = item.produkt.model
         marka = item.produkt.marka
         stawka = item.produkt.stawka
 
+        if item.produkt.id in product_multipliers:
+            stawka *= product_multipliers[item.produkt.id]
+
         if task_type == 'multiplier':
-            for zadanie in aktywne_zadania.filter(mnoznik_stawki__gt=1):
+            for zadanie in aktywne_zadania.filter(
+                typ=Task.Typ.KONKRETNE_MODELE, mnoznik_stawki__gt=1
+            ):
                 if item.produkt in zadanie.produkty.all():
                     stawka *= zadanie.mnoznik_stawki
                     break
         elif task_type == 'specific':
-            for zadanie in aktywne_zadania.filter(premia_za_dodatkowa_liczbe__gt=0):
+            for zadanie in aktywne_zadania.filter(
+                typ=Task.Typ.KONKRETNE_MODELE, premia_za_dodatkowa_liczbe__gt=0
+            ):
                 if item.produkt in zadanie.produkty.all():
                     stawka += zadanie.premia_za_dodatkowa_liczbe
                     break
@@ -266,15 +309,16 @@ def podsumowanie_sprzedazy(request):
                 'model': model,
                 'liczba_sztuk': 0,
                 'stawka': stawka,
-                'suma_prowizji': 0
+                'suma_prowizji': 0,
             }
 
         sprzedaz_podsumowanie[klucz]['liczba_sztuk'] += item.liczba_sztuk
         sprzedaz_podsumowanie[klucz]['suma_prowizji'] += stawka * item.liczba_sztuk
 
-    task_rewards = []
     if task_type == 'commission':
-        for zadanie in aktywne_zadania.filter(premia_za_minimalna_liczbe__gt=0):
+        for zadanie in aktywne_zadania.filter(
+            typ=Task.Typ.KONKRETNE_MODELE, premia_za_minimalna_liczbe__gt=0
+        ):
             sprzedane = (
                 Sprzedaz.objects.filter(
                     produkt__in=zadanie.produkty.all(),
