@@ -17,6 +17,8 @@ from django.contrib.auth.decorators import login_required
 from openpyxl.styles import PatternFill, Font, Alignment, Border, Side
 from openpyxl.utils import get_column_letter
 from io import BytesIO
+from django.template.loader import get_template
+from django.template import TemplateDoesNotExist
 
 @login_required
 def test_template(request):
