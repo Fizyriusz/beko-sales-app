@@ -1,0 +1,97 @@
+{% extends 'produkty/base.html' %}
+
+{% block title %}Szczegóły zadania: {{ zadanie.nazwa }}{% endblock %}
+
+{% block content %}
+<div class="container mt-4">
+    <div class="card">
+        <div class="card-header bg-primary text-white">
+            <h2>Szczegóły zadania: {{ zadanie.nazwa }}</h2>
+        </div>
+        <div class="card-body">
+            <p><strong>Okres:</strong> od {{ zadanie.data_start }} do {{ zadanie.data_koniec }}</p>
+            <p><strong>Cel:</strong> {{ zadanie.get_target_display }}</p>
+
+            <hr>
+
+            <h4>Postęp realizacji</h4>
+            
+            <div class="progress" style="height: 30px;">
+                <div class="progress-bar progress-bar-striped progress-bar-animated" role="progressbar" style="width: {{ procent_realizacji }}%;" aria-valuenow="{{ procent_realizacji }}" aria-valuemin="0" aria-valuemax="100">
+                    {{ procent_realizacji|floatformat:2 }}%
+                </div>
+            </div>
+            <p class="mt-2">
+                <strong>Osiągnięto:</strong> 
+                {{ postep }} / {{ cel }} 
+                {% if zadanie.target == 'ilosc' %}sztuk{% else %}PLN{% endif %}
+            </p>
+
+            <div>
+                {% if zadanie.prog_1 %}
+                <span class="badge {% if prog_1_status %}bg-success{% else %}bg-secondary{% endif %}">
+                    Próg 1: {{ zadanie.prog_1 }}{% if zadanie.target == 'ilosc' %} szt.{% endif %} {% if prog_1_status %}(Osiągnięty){% else %}(Nieosiągnięty){% endif %}
+                </span>
+                {% endif %}
+                {% if zadanie.prog_2 %}
+                <span class="badge {% if prog_2_status %}bg-success{% else %}bg-secondary{% endif %}">
+                    Próg 2: {{ zadanie.prog_2 }}{% if zadanie.target == 'ilosc' %} szt.{% endif %} {% if prog_2_status %}(Osiągnięty){% else %}(Nieosiągnięty){% endif %}
+                </span>
+                {% endif %}
+                 {% if zadanie.prog_1_premia %}
+                <span class="badge {% if prog_1_status %}bg-success{% else %}bg-secondary{% endif %}">
+                    Próg 1: {{ zadanie.prog_1_premia }}{% if zadanie.target != 'ilosc' %} PLN{% endif %} {% if prog_1_status %}(Osiągnięty){% else %}(Nieosiągnięty){% endif %}
+                </span>
+                {% endif %}
+                {% if zadanie.prog_2_premia %}
+                <span class="badge {% if prog_2_status %}bg-success{% else %}bg-secondary{% endif %}">
+                    Próg 2: {{ zadanie.prog_2_premia }}{% if zadanie.target != 'ilosc' %} PLN{% endif %} {% if prog_2_status %}(Osiągnięty){% else %}(Nieosiągnięty){% endif %}
+                </span>
+                {% endif %}
+            </div>
+
+            <hr>
+
+            <div class="row">
+                <div class="col-md-6">
+                    <h4>Sprzedane modele w ramach zadania</h4>
+                    {% if sprzedane_modele %}
+                    <table class="table table-striped table-sm">
+                        <thead>
+                            <tr>
+                                <th>Model</th>
+                                <th>Marka</th>
+                                <th>Sprzedana ilość</th>
+                                <th>Wartość sprzedaży</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for model in sprzedane_modele %}
+                            <tr>
+                                <td>{{ model.produkt__model }}</td>
+                                <td>{{ model.produkt__marka }}</td>
+                                <td>{{ model.ilosc }}</td>
+                                <td>{{ model.wartosc|floatformat:2 }} PLN</td>
+                            </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                    {% else %}
+                    <p>Brak sprzedanych modeli w tym zadaniu.</p>
+                    {% endif %}
+                </div>
+                <div class="col-md-6">
+                    <h4>Modele objęte zadaniem</h4>
+                     <ul class="list-group">
+                        {% for model in modele_w_zadaniu %}
+                            <li class="list-group-item">{{ model.model }} - {{ model.marka }}</li>
+                        {% endfor %}
+                    </ul>
+                </div>
+            </div>
+            
+            <a href="{% url 'produkty:lista_zadan' %}" class="btn btn-primary mt-3">Powrót do listy zadań</a>
+        </div>
+    </div>
+</div>
+{% endblock %}

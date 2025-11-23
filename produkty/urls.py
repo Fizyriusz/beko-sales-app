@@ -13,6 +13,13 @@ urlpatterns = [
     path('podsumowanie/reset/', views.reset_sprzedaz, name='reset_sprzedaz'),
     path('wyciagnij_liste_modeli/', views.wyciagnij_liste_modeli, name='wyciagnij_liste_modeli'),  # Nowy widok wyciągania listy modeli
 
+    # Zadania
+    path('zadania/', views.zadania_management, name='lista_zadan'),
+    path('zadania/nowe/', views.zadanie_dodaj, name='nowe_zadanie'),
+    path('zadania/edytuj/<int:zadanie_id>/', views.zadanie_edytuj, name='edytuj_zadanie'),
+    path('zadania/usun/<int:zadanie_id>/', views.zadanie_usun, name='usun_zadanie'),
+    path('zadania/<int:zadanie_id>/', views.szczegoly_zadania, name='szczegoly_zadania'),
+
   # Nowe ścieżki do widoków związanych z zadaniówkami
     path('zadaniowki/', views.lista_zadaniowek, name='lista_zadaniowek'),
     path('zadaniowki/<int:task_id>/', views.szczegoly_zadaniowki, name='szczegoly_zadaniowki'),

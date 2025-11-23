@@ -63,6 +63,16 @@ Dashboard
     <h2 class="tools-header">Narzędzia i Akcje</h2>
     <div class="row tools-grid">
         <div class="col-lg-3 col-md-6 mb-4">
+            <a href="{% url 'produkty:lista_zadan' %}" class="tool-card-link">
+                <div class="tool-card">
+                    <div class="card-body">
+                        <i class="fas fa-bullseye tool-icon"></i>
+                        <h5 class="card-title">Nowe Zadania</h5>
+                    </div>
+                </div>
+            </a>
+        </div>
+        <div class="col-lg-3 col-md-6 mb-4">
             <a href="{% url 'produkty:podsumowanie_sprzedazy' %}" class="tool-card-link">
                 <div class="tool-card">
                     <div class="card-body">

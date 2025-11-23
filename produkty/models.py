@@ -1,4 +1,6 @@
 from django.db import models
+from django.contrib.auth.models import User
+
 
 class Produkt(models.Model):
     model = models.CharField(max_length=100, unique=True)
@@ -7,7 +9,7 @@ class Produkt(models.Model):
     marka = models.CharField(max_length=100, null=True, blank=True)
 
     def __str__(self):
-        return f"{self.marka} - {self.model}"
+        return self.model
 
 class Task(models.Model):
     nazwa = models.CharField(max_length=255)
@@ -23,6 +25,22 @@ class Task(models.Model):
 
     def __str__(self):
         return f"{self.nazwa} ({self.data_od} - {self.data_do})"
+
+
+class Zadanie(models.Model):
+    nazwa = models.CharField(max_length=255)
+    produkty = models.ManyToManyField('Produkt', related_name='cele', blank=True)
+    data_start = models.DateField()
+    data_koniec = models.DateField()
+    target = models.CharField(max_length=10, choices=[('ilosc', 'Ilość'), ('wartosc', 'Wartość')], default='ilosc')
+    prog_1 = models.PositiveIntegerField(null=True, blank=True)
+    prog_1_premia = models.DecimalField(max_digits=10, decimal_places=2, null=True, blank=True)
+    prog_2 = models.PositiveIntegerField(null=True, blank=True)
+    prog_2_premia = models.DecimalField(max_digits=10, decimal_places=2, null=True, blank=True)
+
+    def __str__(self):
+        return f"{self.nazwa} ({self.data_start} - {self.data_koniec})"
+
 
 
 class Sprzedaz(models.Model):

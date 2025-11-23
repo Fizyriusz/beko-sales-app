@@ -1,6 +1,6 @@
 from django.shortcuts import render, redirect, get_object_or_404
-from .models import Produkt, Sprzedaz, Task, Ekspozycja, GrupaProduktowa, Marka, KlientCounter
-from .forms import TaskForm
+from .models import Produkt, Sprzedaz, Task, Zadanie, Ekspozycja, GrupaProduktowa, Marka, KlientCounter
+from .forms import TaskForm, ZadanieForm
 import openpyxl
 from openpyxl.utils.exceptions import InvalidFileException
 from zipfile import BadZipFile
@@ -642,3 +642,111 @@ def zadaniowka_usun(request, zadaniowka_id):
         return redirect('produkty:zadaniowki_management')
     
     return render(request, 'produkty/zadaniowka_usun.html', {'zadaniowka': zadaniowka})
+
+@login_required
+def zadania_management(request):
+    """Widok do zarządzania zadaniami"""
+    zadania = Zadanie.objects.all().order_by('-data_start')
+    return render(request, 'produkty/zadania_management.html', {'zadania': zadania})
+
+@login_required
+def zadanie_dodaj(request):
+    """Widok do dodawania nowego zadania"""
+    if request.method == 'POST':
+        form = ZadanieForm(request.POST)
+        if form.is_valid():
+            form.save()
+            return redirect('produkty:zadania_management')
+    else:
+        form = ZadanieForm()
+    
+    all_products = Produkt.objects.all()
+    
+    return render(request, 'produkty/zadanie_form.html', {'form': form, 'all_products': all_products})
+
+@login_required
+def zadanie_edytuj(request, zadanie_id):
+    """Widok do edycji istniejącego zadania"""
+    zadanie = get_object_or_404(Zadanie, id=zadanie_id)
+    
+    if request.method == 'POST':
+        form = ZadanieForm(request.POST, instance=zadanie)
+        if form.is_valid():
+            form.save()
+            return redirect('produkty:zadania_management')
+    else:
+        form = ZadanieForm(instance=zadanie)
+    
+    all_products = Produkt.objects.all()
+
+    return render(request, 'produkty/zadanie_form.html', {'form': form, 'all_products': all_products, 'zadanie': zadanie})
+
+@login_required
+def zadanie_usun(request, zadanie_id):
+    """Widok do usuwania zadania"""
+    zadanie = get_object_or_404(Zadanie, id=zadanie_id)
+    
+    if request.method == 'POST':
+        zadanie.delete()
+        return redirect('produkty:lista_zadan')
+    
+    return render(request, 'produkty/zadanie_usun.html', {'zadanie': zadanie})
+
+@login_required
+def szczegoly_zadania(request, zadanie_id):
+    zadanie = get_object_or_404(Zadanie, id=zadanie_id)
+    modele_w_zadaniu = zadanie.produkty.all()
+
+    sprzedaz_w_okresie = Sprzedaz.objects.filter(
+        produkt__in=modele_w_zadaniu,
+        data_sprzedazy__range=(zadanie.data_start, zadanie.data_koniec)
+    )
+
+    postep = 0
+    cel = 0
+    prog_1_status = False
+    prog_2_status = False
+
+    if zadanie.target == 'ilosc':
+        postep = sprzedaz_w_okresie.aggregate(suma=Sum('liczba_sztuk'))['suma'] or 0
+        if zadanie.prog_1:
+            cel = zadanie.prog_1
+            if postep >= zadanie.prog_1:
+                prog_1_status = True
+        if zadanie.prog_2:
+            cel = zadanie.prog_2 # Ustawiamy cel na najwyższy próg
+            if postep >= zadanie.prog_2:
+                prog_2_status = True
+
+    else: # wartościowy
+        postep = sprzedaz_w_okresie.annotate(
+            wartosc=models.F('liczba_sztuk') * models.F('produkt__stawka')
+        ).aggregate(suma=Sum('wartosc'))['suma'] or 0
+        if zadanie.prog_1_premia:
+            cel = zadanie.prog_1_premia
+            if postep >= zadanie.prog_1_premia:
+                prog_1_status = True
+        if zadanie.prog_2_premia:
+            cel = zadanie.prog_2_premia # Ustawiamy cel na najwyższy próg
+            if postep >= zadanie.prog_2_premia:
+                prog_2_status = True
+    
+    procent_realizacji = (postep / cel * 100) if cel and cel > 0 else 0
+
+    sprzedane_modele = sprzedaz_w_okresie.values('produkt__model', 'produkt__marka').annotate(
+        ilosc=Sum('liczba_sztuk'),
+        wartosc=Sum(models.F('liczba_sztuk') * models.F('produkt__stawka'))
+    ).order_by('-ilosc')
+
+    context = {
+        'zadanie': zadanie,
+        'postep': postep,
+        'cel': cel,
+        'procent_realizacji': procent_realizacji,
+        'sprzedane_modele': sprzedane_modele,
+        'modele_w_zadaniu': modele_w_zadaniu,
+        'prog_1_status': prog_1_status,
+        'prog_2_status': prog_2_status,
+    }
+
+    return render(request, 'produkty/szczegoly_zadania.html', context)
