@@ -1,178 +1,313 @@
 {% extends 'produkty/base.html' %}
 
 {% block title %}
-Strona Główna
+Dashboard
 {% endblock %}
 
 {% block content %}
-<div class="container">
-    <!-- Karty nawigacyjne -->
-    <div class="row mb-3">
-        <div class="col-md-3 mb-2">
-            <a href="{% url 'produkty:import_excel' %}" class="card-link">
-                <div class="card nav-card">
-                    <div class="card-body text-center py-2">
-                        <h5 class="card-title small-title">Import Produktów</h5>
-                    </div>
-                </div>
-            </a>
-        </div>
-        <div class="col-md-3 mb-2">
-            <a href="{% url 'produkty:sprzedaz' %}" class="card-link">
-                <div class="card nav-card">
-                    <div class="card-body text-center py-2">
-                        <h5 class="card-title small-title">Rejestracja Sprzedaży</h5>
-                    </div>
-                </div>
-            </a>
-        </div>
-        <div class="col-md-3 mb-2">
-            <a href="{% url 'produkty:podsumowanie_sprzedazy' %}" class="card-link">
-                <div class="card nav-card">
-                    <div class="card-body text-center py-2">
-                        <h5 class="card-title small-title">Podsumowanie Sprzedaży</h5>
-                    </div>
-                </div>
-            </a>
-        </div>
-        <div class="col-md-3 mb-2">
-            <a href="{% url 'produkty:wyciagnij_liste_modeli' %}" class="card-link">
-                <div class="card nav-card">
-                    <div class="card-body text-center py-2">
-                        <h5 class="card-title small-title">Wyciągnij Listę Modeli</h5>
-                    </div>
-                </div>
-            </a>
-        </div>
-    </div>
-    <div class="row mb-3">
-        <div class="col-md-3 mb-2">
-            <a href="{% url 'produkty:lista_zadaniowek' %}" class="card-link">
-                <div class="card nav-card">
-                    <div class="card-body text-center py-2">
-                        <h5 class="card-title small-title">Zadaniowki</h5>
-                    </div>
-                </div>
-            </a>
-        </div>
-        <div class="col-md-3 mb-2">
-            <a href="{% url 'produkty:ekspozycja_form' grupa_id=1 %}" class="card-link">
-                <div class="card nav-card">
-                    <div class="card-body text-center py-2">
-                        <h5 class="card-title small-title">Formularz Ekspozycji</h5>
-                    </div>
-                </div>
-            </a>
-        </div>
-        <div class="col-md-3 mb-2">
-            <a href="{% url 'produkty:zadaniowki_management' %}" class="card-link">
-                <div class="card nav-card">
-                    <div class="card-body text-center py-2">
-                        <h5 class="card-title small-title">Zarządzanie Zadaniówkami</h5>
-                    </div>
-                </div>
-            </a>
-        </div>
-    </div>
+<div class="dashboard-container">
+    <h1 class="dashboard-header">Panel Główny</h1>
     
-    <!-- Licznik klientów -->
-    <div class="row mb-3 mt-4">
-        <div class="col-md-12">
-            <div class="card summary-card-alt">
-                <div class="card-body text-center">
+    <!-- Sekcja 1: Statystyki KPI -->
+    <div class="row kpi-section">
+        <div class="col-lg-4 col-md-6 mb-4">
+            <div class="kpi-card">
+                <div class="card-body">
+                    <h5 class="card-title">Tygodniowa sprzedaż</h5>
+                    <p class="card-text amount highlight">{{ tygodniowa_suma }} PLN</p>
+                    <span class="card-subtitle text-muted">Suma z ostatnich 7 dni</span>
+                </div>
+            </div>
+        </div>
+        <div class="col-lg-4 col-md-6 mb-4">
+            <div class="kpi-card">
+                <div class="card-body">
+                    <h5 class="card-title">Miesięczna sprzedaż</h5>
+                    <p class="card-text amount">{{ miesieczna_suma }} PLN</p>
+                    <span class="card-subtitle text-muted">Suma w bieżącym miesiącu</span>
+                </div>
+            </div>
+        </div>
+        <div class="col-lg-4 col-md-12 mb-4">
+            <div class="kpi-card">
+                <div class="card-body">
                     <h5 class="card-title">Licznik Klientów</h5>
                     <p class="card-text amount">{{ licznik_klientow }}</p>
-                    <a href="{% url 'produkty:klienci' %}" class="btn btn-light btn-sm mt-2">Przejdź do licznika</a>
+                    <a href="{% url 'produkty:klienci' %}" class="card-link">Zarządzaj klientami &rarr;</a>
                 </div>
             </div>
         </div>
     </div>
 
-    <!-- Liczniki sprzedaży -->
-    <div class="row mb-4 mt-3">
-        <div class="col-md-6">
-            <div class="card summary-card">
-                <div class="card-body text-center">
-                    <h5 class="card-title">Tygodniowa sprzedaż</h5>
-                    <p class="card-text amount">{{ tygodniowa_suma }} PLN</p>
+    <!-- Sekcja 2: Główna Akcja (Hero Section) -->
+    <div class="row hero-section">
+        <div class="col-12">
+            <div class="hero-card">
+                <div class="card-body">
+                    <div class="hero-content">
+                        <div class="hero-icon">
+                            <i class="fas fa-cash-register"></i>
+                        </div>
+                        <div class="hero-text">
+                            <h2 class="card-title">Zarejestruj Nową Sprzedaż</h2>
+                            <p class="card-subtitle">Dodaj transakcję do systemu, aby zaktualizować swoje postępy.</p>
+                        </div>
+                        <a href="{% url 'produkty:sprzedaz' %}" class="btn btn-primary hero-btn">Rozpocznij &rarr;</a>
+                    </div>
                 </div>
             </div>
         </div>
-        <div class="col-md-6">
-            <div class="card summary-card">
-                <div class="card-body text-center">
-                    <h5 class="card-title">Miesięczna sprzedaż</h5>
-                    <p class="card-text amount">{{ miesieczna_suma }} PLN</p>
+    </div>
+
+    <!-- Sekcja 3: Siatka Narzędzi -->
+    <h2 class="tools-header">Narzędzia i Akcje</h2>
+    <div class="row tools-grid">
+        <div class="col-lg-3 col-md-6 mb-4">
+            <a href="{% url 'produkty:podsumowanie_sprzedazy' %}" class="tool-card-link">
+                <div class="tool-card">
+                    <div class="card-body">
+                        <i class="fas fa-chart-line tool-icon"></i>
+                        <h5 class="card-title">Podsumowanie Sprzedaży</h5>
+                    </div>
                 </div>
-            </div>
+            </a>
+        </div>
+        <div class="col-lg-3 col-md-6 mb-4">
+            <a href="{% url 'produkty:lista_zadaniowek' %}" class="tool-card-link">
+                <div class="tool-card">
+                    <div class="card-body">
+                        <i class="fas fa-tasks tool-icon"></i>
+                        <h5 class="card-title">Zadaniówki</h5>
+                    </div>
+                </div>
+            </a>
+        </div>
+        <div class="col-lg-3 col-md-6 mb-4">
+            <a href="{% url 'produkty:ekspozycja_form' grupa_id=1 %}" class="tool-card-link">
+                <div class="tool-card">
+                    <div class="card-body">
+                        <i class="fas fa-boxes tool-icon"></i>
+                        <h5 class="card-title">Formularz Ekspozycji</h5>
+                    </div>
+                </div>
+            </a>
+        </div>
+        <div class="col-lg-3 col-md-6 mb-4">
+            <a href="{% url 'produkty:import_excel' %}" class="tool-card-link">
+                <div class="tool-card">
+                    <div class="card-body">
+                        <i class="fas fa-file-import tool-icon"></i>
+                        <h5 class="card-title">Import Produktów</h5>
+                    </div>
+                </div>
+            </a>
+        </div>
+         <div class="col-lg-3 col-md-6 mb-4">
+            <a href="{% url 'produkty:zadaniowki_management' %}" class="tool-card-link">
+                <div class="tool-card">
+                    <div class="card-body">
+                        <i class="fas fa-edit tool-icon"></i>
+                        <h5 class="card-title">Zarządzaj Zadaniówkami</h5>
+                    </div>
+                </div>
+            </a>
+        </div>
+        <div class="col-lg-3 col-md-6 mb-4">
+            <a href="{% url 'produkty:wyciagnij_liste_modeli' %}" class="tool-card-link">
+                <div class="tool-card">
+                    <div class="card-body">
+                        <i class="fas fa-list-ol tool-icon"></i>
+                        <h5 class="card-title">Lista Modeli</h5>
+                    </div>
+                </div>
+            </a>
         </div>
     </div>
 </div>
 
 <style>
-.card {
-    transition: transform 0.3s;
+.dashboard-container {
+    padding: 20px;
+    background-color: #F4F6F8;
+    border-radius: 12px;
+}
+
+.dashboard-header {
+    font-size: 28px;
+    font-weight: 700;
+    color: #343a40;
+    margin-bottom: 30px;
+}
+
+/* KPI Cards */
+.kpi-card {
+    background-color: #ffffff;
+    border: 1px solid #e3e6f0;
+    border-radius: 12px;
+    box-shadow: 0 4px 12px rgba(0,0,0,0.05);
+    transition: all 0.3s ease;
     height: 100%;
-    border: none;
-    box-shadow: 0 2px 4px rgba(0,0,0,0.1);
 }
 
-.nav-card {
-    background-color: #00b894;
-    color: white;
-}
-
-.summary-card {
-    background-color: #2c3e50;
-    color: white;
-}
-
-.summary-card-alt {
-    background-color: #3498db;
-    color: white;
-}
-
-.card:hover {
+.kpi-card:hover {
     transform: translateY(-5px);
+    box-shadow: 0 8px 16px rgba(0,0,0,0.1);
 }
 
-.card-link {
+.kpi-card .card-body {
+    padding: 25px;
+}
+
+.kpi-card .card-title {
+    font-size: 16px;
+    font-weight: 600;
+    color: #5a5c69;
+    margin-bottom: 5px;
+}
+
+.kpi-card .amount {
+    font-size: 32px;
+    font-weight: 700;
+    color: #343a40;
+    margin: 5px 0;
+}
+
+.kpi-card .amount.highlight {
+    color: #002450;
+}
+
+.kpi-card .card-link {
+    font-size: 14px;
+    font-weight: 600;
+    color: #002450;
     text-decoration: none;
-    color: inherit;
+    transition: color 0.2s;
 }
 
-.card-body {
-    padding: 1.25rem;
+.kpi-card .card-link:hover {
+    color: #1abc9c;
 }
 
-.card-title {
+/* Hero Section */
+.hero-card {
+    background-color: #002450;
+    color: #ffffff;
+    border-radius: 12px;
+    margin-bottom: 40px;
+    box-shadow: 0 8px 20px rgba(0, 36, 80, 0.2);
+    transition: all 0.3s ease;
+}
+
+.hero-card:hover {
+    transform: scale(1.02);
+}
+
+.hero-content {
+    display: flex;
+    align-items: center;
+    padding: 20px 30px;
+}
+
+.hero-icon {
+    font-size: 40px;
+    margin-right: 25px;
+    opacity: 0.8;
+}
+
+.hero-text {
+    flex-grow: 1;
+}
+
+.hero-text .card-title {
+    font-size: 24px;
+    font-weight: 700;
     margin: 0;
-    font-size: 1.1rem;
-    font-weight: 500;
 }
 
-.small-title {
-    font-size: 0.9rem;
+.hero-text .card-subtitle {
+    font-size: 16px;
+    opacity: 0.8;
+    margin: 5px 0 0;
+}
+
+.hero-btn {
+    background-color: #ffffff;
+    color: #002450;
+    font-weight: 700;
+    font-size: 16px;
+    border-radius: 8px;
+    padding: 12px 25px;
+    border: none;
+    transition: all 0.3s ease;
+}
+
+.hero-btn:hover {
+    background-color: #f0f0f0;
+    transform: scale(1.05);
+}
+
+/* Tools Grid */
+.tools-header {
+    font-size: 22px;
+    font-weight: 600;
+    color: #495057;
+    margin-bottom: 20px;
+    border-bottom: 2px solid #e3e6f0;
+    padding-bottom: 10px;
+}
+
+.tool-card-link {
+    text-decoration: none;
+}
+
+.tool-card {
+    background-color: #ffffff;
+    border: 1px solid #e3e6f0;
+    border-radius: 12px;
+    box-shadow: 0 4px 12px rgba(0,0,0,0.05);
+    transition: all 0.3s ease;
+    text-align: center;
+    height: 100%;
+}
+
+.tool-card:hover {
+    transform: translateY(-5px);
+    box-shadow: 0 8px 16px rgba(0,0,0,0.1);
+    border-color: #002450;
+}
+
+.tool-card .card-body {
+    padding: 25px 20px;
+}
+
+.tool-icon {
+    font-size: 32px;
+    color: #002450;
+    margin-bottom: 15px;
+    transition: color 0.3s;
+}
+
+.tool-card:hover .tool-icon {
+    color: #1abc9c;
+}
+
+.tool-card .card-title {
+    font-size: 15px;
+    font-weight: 600;
+    color: #5a5c69;
     margin: 0;
+    /* Prevent text wrapping */
+    white-space: normal; 
+    word-break: keep-all;
 }
 
-.amount {
-    font-size: 1.5rem;
-    font-weight: bold;
-    margin: 0.5rem 0 0;
-}
-
-@media (max-width: 768px) {
-    .card {
-        margin-bottom: 1rem;
+@media (max-width: 991.98px) {
+    .hero-content {
+        flex-direction: column;
+        text-align: center;
     }
-    
-    .card-title {
-        font-size: 1rem;
-    }
-    
-    .amount {
-        font-size: 1.25rem;
+    .hero-text {
+        margin-bottom: 20px;
     }
 }
 </style>

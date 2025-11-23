@@ -4,168 +4,42 @@
     <meta charset="UTF-8">
     <title>{% block title %}Aplikacja Sprzedażowa{% endblock %}</title>
     {% load static %}
-      <!-- 1) Tutaj wklejasz Bootstrapa -->
-  <link
-    href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css"
-    rel="stylesheet"
-    integrity="sha384-…"
-    crossorigin="anonymous"
-  />
-    <link rel="stylesheet" href="{% static 'produkty/style.css' %}?v=6">
+    <link
+        href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css"
+        rel="stylesheet"
+        integrity="sha384-T3c6CoIi6uLrA9TneNEoa7RxnatzjcDSCmG1MXxSR1GAsXEV/Dwwykc2MPK8M2HN"
+        crossorigin="anonymous"
+    />
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css" integrity="sha512-DTOQO9RWCH3ppGqcWaEA1BIZOC6xxalwEsw9c2QQeAIftl+Vegovlnee1c9QX4TctnWMn13TZye+giMm8e2LwA==" crossorigin="anonymous" referrerpolicy="no-referrer" />
+    <link rel="stylesheet" href="{% static 'produkty/style.css' %}?v=7">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <style>
-        body {
-            font-family: Arial, sans-serif;
-            margin: 0;
-            padding: 0;
-            background-color: #f5f5f5;
-        }
-        .header {
-            background-color: #2c3e50;
-            color: white;
-            padding: 15px;
-            margin: 0;
-            width: 100%;
-            position: fixed;
-            top: 0;
-            z-index: 1000;
-            box-shadow: 0 2px 5px rgba(0,0,0,0.1);
-        }
-        .header h1 {
-            margin: 0;
-            font-size: 24px;
-            padding-left: 50px;
-        }
-        .hamburger {
-            position: absolute;
-            left: 15px;
-            top: 50%;
-            transform: translateY(-50%);
-            background: none;
-            border: none;
-            color: white;
-            font-size: 24px;
-            cursor: pointer;
-        }
-        .container {
-            max-width: 1200px;
-            margin: 80px auto 20px;
-            background-color: white;
-            padding: 20px;
-            border-radius: 5px;
-            box-shadow: 0 0 10px rgba(0,0,0,0.1);
-        }
-        .logout-btn {
-            color: #ff6b6b;
-            text-decoration: none;
-            padding: 8px 15px;
-            display: block;
-            margin-top: 20px;
-            border-top: 1px solid #34495e;
-        }
-        .logout-btn:hover {
-            background-color: #c0392b;
-            color: white;
-        }
-        .sidebar {
-            position: fixed;
-            left: -250px;
-            top: 0;
-            height: 100%;
-            width: 250px;
-            background-color: #2c3e50;
-            transition: 0.3s;
-            z-index: 1001;
-            box-shadow: 2px 0 5px rgba(0,0,0,0.1);
-            padding-top: 60px;
-        }
-        .sidebar.open {
-            left: 0;
-        }
-        .overlay {
-            display: none;
-            position: fixed;
-            top: 0;
-            left: 0;
-            right: 0;
-            bottom: 0;
-            background: rgba(0,0,0,0.5);
-            z-index: 1000;
-        }
-        .overlay.active {
-            display: block;
-        }
-        .sidebar h3 {
-            color: white;
-            padding: 0 15px;
-            margin-bottom: 20px;
-        }
-        .sidebar ul {
-            list-style: none;
-            padding: 0;
-            margin: 0;
-        }
-        .sidebar ul li a {
-            padding: 10px 15px;
-            display: block;
-            color: white;
-            text-decoration: none;
-            transition: 0.2s;
-        }
-        .sidebar ul li a:hover {
-            background-color: #34495e;
-        }
-        .has-submenu > a {
-            cursor: pointer;
-        }
-        .submenu {
-            display: none;
-            padding-left: 15px;
-        }
-        .submenu.open {
-            display: block;
-        }
-        .close-hamburger {
-            position: absolute;
-            top: 10px;
-            right: 10px;
-            background: none;
-            border: none;
-            font-size: 24px;
-            cursor: pointer;
-            color: white;
-        }
-    </style>
 </head>
 <body>
-    <!-- Nagłówek -->
     <div class="header">
         <button class="hamburger" onclick="toggleSidebar()">&#9776;</button>
         <h1>Witaj w aplikacji sprzedażowej Beko!</h1>
     </div>
 
-    <!-- Overlay -->
     <div class="overlay" id="overlay"></div>
 
-    <!-- Kontener -->
     <div class="container" id="container">
-        <!-- Sidebar -->
         <div class="sidebar" id="sidebar">
-            <button class="close-hamburger">&#9776;</button>
-            <h3>Nawigacja</h3>
-            <ul>
-                <li><a href="{% url 'produkty:home' %}">Strona Główna</a></li>
-                <li><a href="{% url 'produkty:sprzedaz' %}">Rejestracja Sprzedaży</a></li>
-                <li><a href="{% url 'produkty:podsumowanie_sprzedazy' %}">Podsumowanie Sprzedaży</a></li>
+            <div class="sidebar-header">
+                <h3>Beko Ambassador</h3>
+            </div>
+            <ul class="sidebar-nav">
+                <li><a href="{% url 'produkty:home' %}"><i class="fas fa-home"></i> Strona Główna</a></li>
+                <li><a href="{% url 'produkty:sprzedaz' %}"><i class="fas fa-cash-register"></i> Rejestracja Sprzedaży</a></li>
+                <li><a href="{% url 'produkty:podsumowanie_sprzedazy' %}"><i class="fas fa-chart-bar"></i> Podsumowanie Sprzedaży</a></li>
                 <li class="has-submenu">
-                    <a href="#" class="submenu-toggle">Zadania</a>
+                    <a href="#" class="submenu-toggle"><i class="fas fa-tasks"></i> Zadania <i class="fas fa-chevron-down float-end"></i></a>
                     <ul class="submenu">
                         <li><a href="{% url 'produkty:lista_zadaniowek' %}">Zadaniówki</a></li>
                         <li><a href="{% url 'produkty:zadaniowki_management' %}">Zarządzanie Zadaniówkami</a></li>
                     </ul>
                 </li>
                 <li class="has-submenu">
-                    <a href="#" class="submenu-toggle">Ekspozycja</a>
+                    <a href="#" class="submenu-toggle"><i class="fas fa-boxes"></i> Ekspozycja <i class="fas fa-chevron-down float-end"></i></a>
                     <ul class="submenu">
                         <li><a href="{% url 'produkty:ekspozycja_form' grupa_id=1 %}">Formularz Ekspozycji</a></li>
                         <li><a href="{% url 'produkty:ekspozycja_summary' %}">Podsumowanie ekspozycji</a></li>
@@ -173,20 +47,21 @@
                     </ul>
                 </li>
                 <li class="has-submenu">
-                    <a href="#" class="submenu-toggle">Inne</a>
+                    <a href="#" class="submenu-toggle"><i class="fas fa-cogs"></i> Inne <i class="fas fa-chevron-down float-end"></i></a>
                     <ul class="submenu">
                         <li><a href="{% url 'produkty:import_excel' %}">Import produktów</a></li>
                         <li><a href="{% url 'produkty:wyciagnij_liste_modeli' %}">Wyciągnij listę modeli</a></li>
                         <li><a href="{% url 'produkty:klienci' %}">Licznik klientów</a></li>
                     </ul>
                 </li>
-                {% if user.is_authenticated %}
-                <li><a href="{% url 'logout' %}" class="logout-btn">Wyloguj się</a></li>
-                {% endif %}
             </ul>
+            {% if user.is_authenticated %}
+            <div class="sidebar-footer">
+                <a href="{% url 'logout' %}" class="logout-btn"><i class="fas fa-sign-out-alt"></i> Wyloguj się</a>
+            </div>
+            {% endif %}
         </div>
-        
-        <!-- Główna zawartość -->
+
         <div class="main-content" id="main-content">
             {% block content %}{% endblock %}
         </div>
@@ -199,43 +74,26 @@
         const sidebar = document.getElementById('sidebar');
         const container = document.getElementById('container');
         const overlay = document.getElementById('overlay');
-        const links = document.querySelectorAll('.sidebar a:not(.submenu-toggle)');
-        const submenuToggles = document.querySelectorAll('.submenu-toggle');
         const hamburger = document.querySelector('.hamburger');
-        const closeHamburger = document.querySelector('.close-hamburger');
 
         function toggleSidebar() {
-            const isOpen = sidebar.classList.contains('open');
-            if (isOpen) {
-                closeSidebar();
-            } else {
-                openSidebar();
-            }
-        }
-
-        function openSidebar() {
-            sidebar.classList.add('open');
-            overlay.classList.add('active');
-        }
-
-        function closeSidebar() {
-            sidebar.classList.remove('open');
-            overlay.classList.remove('active');
+            sidebar.classList.toggle('open');
+            overlay.classList.toggle('active');
         }
 
         hamburger.addEventListener('click', toggleSidebar);
-        links.forEach(link => {
-            link.addEventListener('click', closeSidebar);
-        });
-        submenuToggles.forEach(toggle => {
-            toggle.addEventListener('click', (e) => {
-                e.preventDefault();
-                const submenu = toggle.nextElementSibling;
-                submenu.classList.toggle('open');
+        overlay.addEventListener('click', toggleSidebar);
+
+        document.querySelectorAll('.submenu-toggle').forEach(item => {
+            item.addEventListener('click', event => {
+                event.preventDefault();
+                const submenu = item.nextElementSibling;
+                if (submenu) {
+                    submenu.style.display = submenu.style.display === 'block' ? 'none' : 'block';
+                    item.querySelector('.fa-chevron-down').classList.toggle('rotated');
+                }
             });
         });
-        overlay.addEventListener('click', closeSidebar);
-        closeHamburger.addEventListener('click', closeSidebar);
     });
     </script>
     {% block extra_js %}{% endblock %}
