@@ -12,6 +12,7 @@ https://docs.djangoproject.com/en/5.1/ref/settings/
 
 import os
 from pathlib import Path
+from django.core.exceptions import ImproperlyConfigured
 import dj_database_url
 from dotenv import load_dotenv
 
@@ -81,8 +82,12 @@ WSGI_APPLICATION = "beko_project.wsgi.application"
 # Database
 # https://docs.djangoproject.com/en/5.1/ref/settings/#databases
 
+database_url = os.environ.get('DATABASE_URL')
+if not database_url:
+    raise ImproperlyConfigured("DATABASE_URL environment variable is not set.")
+
 DATABASES = {
-    'default': dj_database_url.parse(os.environ.get('DATABASE_URL'), conn_max_age=600, ssl_require=True)
+    'default': dj_database_url.parse(database_url, conn_max_age=600)
 }
 
 
