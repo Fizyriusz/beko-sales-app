@@ -1,5 +1,6 @@
 from django.shortcuts import render, redirect, get_object_or_404
 from .models import Produkt, Sprzedaz, Task, Ekspozycja, GrupaProduktowa, Marka, KlientCounter
+from .forms import TaskForm
 import openpyxl
 from openpyxl.utils.exceptions import InvalidFileException
 from zipfile import BadZipFile
@@ -218,7 +219,6 @@ def podsumowanie_sprzedazy(request):
     data_do = request.GET.get('data_do')
     produkt = request.GET.get('produkt')
     marka = request.GET.get('marka')
-    task_type = request.GET.get('task_type')
 
     # Tworzenie podstawowego zapytania do modelu Sprzedaz
     sprzedaz = Sprzedaz.objects.all()
@@ -245,63 +245,33 @@ def podsumowanie_sprzedazy(request):
     # Pobieranie aktywnych zadań
     aktywne_zadania = Task.objects.filter(data_od__lte=end_date, data_do__gte=start_date)
 
-    # Obsługa zadań mix
     task_rewards = []
-    product_multipliers = {}
-    mix_tasks = aktywne_zadania.filter(typ__in=[Task.Typ.MIX_PROWIZJA, Task.Typ.MIX_MNOZNIK])
-    for zadanie in mix_tasks:
-        zakres_start = max(start_date, zadanie.data_od)
-        zakres_koniec = min(end_date, zadanie.data_do)
-        sprzedane = (
-            Sprzedaz.objects.filter(
-                produkt__in=zadanie.produkty.all(),
-                data_sprzedazy__range=[zakres_start, zakres_koniec],
-            ).aggregate(Sum('liczba_sztuk'))['liczba_sztuk__sum']
-            or 0
-        )
-        prog = zadanie.prog_mix or 0
-        if sprzedane >= prog:
-            if zadanie.typ == Task.Typ.MIX_MNOZNIK and zadanie.mnoznik_mix:
-                for p in zadanie.produkty.all():
-                    product_multipliers[p.id] = product_multipliers.get(p.id, Decimal('1')) * zadanie.mnoznik_mix
-            elif zadanie.typ == Task.Typ.MIX_PROWIZJA:
-                premia = zadanie.premia_za_minimalna_liczbe or Decimal('0')
-                if zadanie.premia_za_dodatkowa_liczbe:
-                    dodatkowe = sprzedane - prog
-                    if dodatkowe > 0:
-                        premia += dodatkowe * zadanie.premia_za_dodatkowa_liczbe
-                task_rewards.append(
-                    {
-                        'nazwa': zadanie.nazwa,
-                        'sprzedane': sprzedane,
-                        'premia': premia,
-                    }
-                )
+
+    for zadanie in aktywne_zadania:
+        sprzedane = Sprzedaz.objects.filter(
+            produkt__in=zadanie.produkty.all(),
+            data_sprzedazy__range=[zadanie.data_od, zadanie.data_do]
+        ).aggregate(Sum('liczba_sztuk'))['liczba_sztuk__sum'] or 0
+
+        premia = 0
+        if zadanie.prog_ilosc_1 and sprzedane >= zadanie.prog_ilosc_1:
+            premia = zadanie.prog_premia_1
+        if zadanie.prog_ilosc_2 and sprzedane >= zadanie.prog_ilosc_2:
+            premia = zadanie.prog_premia_2
+        
+        if premia > 0:
+            task_rewards.append({
+                'nazwa': zadanie.nazwa,
+                'sprzedane': sprzedane,
+                'premia': premia,
+            })
 
     for item in sprzedaz:
         model = item.produkt.model
         marka = item.produkt.marka
         stawka = item.produkt.stawka
 
-        if item.produkt.id in product_multipliers:
-            stawka *= product_multipliers[item.produkt.id]
-
-        if task_type == 'multiplier':
-            for zadanie in aktywne_zadania.filter(
-                typ=Task.Typ.KONKRETNE_MODELE, mnoznik_stawki__gt=1
-            ):
-                if item.produkt in zadanie.produkty.all():
-                    stawka *= zadanie.mnoznik_stawki
-                    break
-        elif task_type == 'specific':
-            for zadanie in aktywne_zadania.filter(
-                typ=Task.Typ.KONKRETNE_MODELE, premia_za_dodatkowa_liczbe__gt=0
-            ):
-                if item.produkt in zadanie.produkty.all():
-                    stawka += zadanie.premia_za_dodatkowa_liczbe
-                    break
-
-        klucz = f"{marka}_{model}"  # Używamy string jako klucz zamiast krotki
+        klucz = f"{marka}_{model}"
 
         if klucz not in sprzedaz_podsumowanie:
             sprzedaz_podsumowanie[klucz] = {
@@ -315,31 +285,6 @@ def podsumowanie_sprzedazy(request):
         sprzedaz_podsumowanie[klucz]['liczba_sztuk'] += item.liczba_sztuk
         sprzedaz_podsumowanie[klucz]['suma_prowizji'] += stawka * item.liczba_sztuk
 
-    if task_type == 'commission':
-        for zadanie in aktywne_zadania.filter(
-            typ=Task.Typ.KONKRETNE_MODELE, premia_za_minimalna_liczbe__gt=0
-        ):
-            sprzedane = (
-                Sprzedaz.objects.filter(
-                    produkt__in=zadanie.produkty.all(),
-                    data_sprzedazy__range=[zadanie.data_od, zadanie.data_do],
-                ).aggregate(Sum('liczba_sztuk'))['liczba_sztuk__sum']
-                or 0
-            )
-            premia = Decimal('0')
-            if sprzedane >= zadanie.minimalna_liczba_sztuk:
-                premia = zadanie.premia_za_minimalna_liczbe
-                dodatkowe = sprzedane - zadanie.minimalna_liczba_sztuk
-                if zadanie.premia_za_dodatkowa_liczbe:
-                    premia += dodatkowe * zadanie.premia_za_dodatkowa_liczbe
-            task_rewards.append(
-                {
-                    'nazwa': zadanie.nazwa,
-                    'sprzedane': sprzedane,
-                    'premia': premia,
-                }
-            )
-
     # Obliczanie sumarycznych wartości dla wszystkich sprzedaży
     liczba_sztuk = sum(item['liczba_sztuk'] for item in sprzedaz_podsumowanie.values())
     calkowita_prowizja = sum(item['suma_prowizji'] for item in sprzedaz_podsumowanie.values())
@@ -349,7 +294,6 @@ def podsumowanie_sprzedazy(request):
         'liczba_sztuk': liczba_sztuk,
         'calkowita_prowizja': calkowita_prowizja,
         'task_rewards': task_rewards,
-        'task_type': task_type,
     }
 
     return render(request, 'produkty/podsumowanie_sprzedazy.html', context)
@@ -652,89 +596,41 @@ def zadaniowki_management(request):
 @login_required
 def zadaniowka_dodaj(request):
     """Widok do dodawania nowej zadaniówki"""
+    product_filter = request.GET.get('product_filter', '')
+    produkty_queryset = Produkt.objects.all()
+
+    if product_filter:
+        produkty_queryset = produkty_queryset.filter(model__icontains=product_filter)
+
     if request.method == 'POST':
-        nazwa = request.POST.get('nazwa')
-        opis = request.POST.get('opis', '')
-        typ = request.POST.get('typ')
-        minimalna_liczba_sztuk = int(request.POST.get('minimalna_liczba_sztuk', 0))
-        prog_mix = request.POST.get('prog_mix')
-        prog_mix = int(prog_mix) if prog_mix else None
-        mnoznik_mix = request.POST.get('mnoznik_mix')
-        mnoznik_mix = Decimal(mnoznik_mix) if mnoznik_mix else None
-        premia_za_minimalna_liczbe = Decimal(request.POST.get('premia_za_minimalna_liczbe', 0))
-        premia_za_dodatkowa_liczbe = Decimal(request.POST.get('premia_za_dodatkowa_liczbe', 0))
-        mnoznik_stawki = Decimal(request.POST.get('mnoznik_stawki', 1.0))
-        data_od = request.POST.get('data_od')
-        data_do = request.POST.get('data_do')
-        
-        # Tworzenie nowej zadaniówki
-        zadaniowka = Task.objects.create(
-            nazwa=nazwa,
-            opis=opis,
-            typ=typ,
-            minimalna_liczba_sztuk=minimalna_liczba_sztuk,
-            prog_mix=prog_mix,
-            mnoznik_mix=mnoznik_mix,
-            premia_za_minimalna_liczbe=premia_za_minimalna_liczbe,
-            premia_za_dodatkowa_liczbe=premia_za_dodatkowa_liczbe,
-            mnoznik_stawki=mnoznik_stawki,
-            data_od=data_od,
-            data_do=data_do
-        )
-        
-        # Obsługa wybranych produktów
-        wybrane_produkty = request.POST.getlist('produkty')
-        for produkt_id in wybrane_produkty:
-            produkt = get_object_or_404(Produkt, id=produkt_id)
-            zadaniowka.produkty.add(produkt)
-        
-        return redirect('produkty:zadaniowki_management')
+        form = TaskForm(request.POST, produkty_queryset=produkty_queryset)
+        if form.is_valid():
+            form.save()
+            return redirect('produkty:zadaniowki_management')
+    else:
+        form = TaskForm(produkty_queryset=produkty_queryset)
     
-    # Jeśli metoda GET, wyświetl formularz
-    produkty = Produkt.objects.all().order_by('marka', 'model')
-    return render(request, 'produkty/zadaniowka_form.html', {'produkty': produkty})
+    return render(request, 'produkty/zadaniowka_form.html', {'form': form, 'product_filter': product_filter})
 
 @login_required
 def zadaniowka_edytuj(request, zadaniowka_id):
     """Widok do edycji istniejącej zadaniówki"""
     zadaniowka = get_object_or_404(Task, id=zadaniowka_id)
+    product_filter = request.GET.get('product_filter', '')
+    produkty_queryset = Produkt.objects.all()
+
+    if product_filter:
+        produkty_queryset = produkty_queryset.filter(model__icontains=product_filter)
     
     if request.method == 'POST':
-        zadaniowka.nazwa = request.POST.get('nazwa')
-        zadaniowka.opis = request.POST.get('opis', '')
-        zadaniowka.typ = request.POST.get('typ')
-        zadaniowka.minimalna_liczba_sztuk = int(request.POST.get('minimalna_liczba_sztuk', 0))
-        prog_mix = request.POST.get('prog_mix')
-        zadaniowka.prog_mix = int(prog_mix) if prog_mix else None
-        mnoznik_mix = request.POST.get('mnoznik_mix')
-        zadaniowka.mnoznik_mix = Decimal(mnoznik_mix) if mnoznik_mix else None
-        zadaniowka.premia_za_minimalna_liczbe = Decimal(request.POST.get('premia_za_minimalna_liczbe', 0))
-        zadaniowka.premia_za_dodatkowa_liczbe = Decimal(request.POST.get('premia_za_dodatkowa_liczbe', 0))
-        zadaniowka.mnoznik_stawki = Decimal(request.POST.get('mnoznik_stawki', 1.0))
-        zadaniowka.data_od = request.POST.get('data_od')
-        zadaniowka.data_do = request.POST.get('data_do')
-        
-        # Aktualizacja produktów
-        zadaniowka.produkty.clear()
-        wybrane_produkty = request.POST.getlist('produkty')
-        for produkt_id in wybrane_produkty:
-            produkt = get_object_or_404(Produkt, id=produkt_id)
-            zadaniowka.produkty.add(produkt)
-        
-        zadaniowka.save()
-        return redirect('produkty:zadaniowki_management')
+        form = TaskForm(request.POST, instance=zadaniowka, produkty_queryset=produkty_queryset)
+        if form.is_valid():
+            form.save()
+            return redirect('produkty:zadaniowki_management')
+    else:
+        form = TaskForm(instance=zadaniowka, produkty_queryset=produkty_queryset)
     
-    # Jeśli metoda GET, wyświetl formularz z danymi
-    produkty = Produkt.objects.all().order_by('marka', 'model')
-    wybrane_produkty = zadaniowka.produkty.all().values_list('id', flat=True)
-    
-    context = {
-        'zadaniowka': zadaniowka,
-        'produkty': produkty,
-        'wybrane_produkty': list(wybrane_produkty)
-    }
-    
-    return render(request, 'produkty/zadaniowka_form.html', context)
+    return render(request, 'produkty/zadaniowka_form.html', {'form': form, 'product_filter': product_filter})
 
 @login_required
 def zadaniowka_usun(request, zadaniowka_id):

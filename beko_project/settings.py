@@ -82,14 +82,7 @@ WSGI_APPLICATION = "beko_project.wsgi.application"
 # https://docs.djangoproject.com/en/5.1/ref/settings/#databases
 
 DATABASES = {
-    'default': {
-        'ENGINE': 'django.db.backends.postgresql',
-        'NAME': 'sales_db_l3zl',
-        'USER': 'sales_db_l3zl_user',
-        'PASSWORD': '7uZKNDsXfKM1wzQlcY1nNElO5wtJ9u4z',
-        'HOST': 'dpg-d25ha32li9vc73fabgng-a.oregon-postgres.render.com',
-        'PORT': '5432',
-    }
+    'default': dj_database_url.parse(os.environ.get('DATABASE_URL'), conn_max_age=600, ssl_require=True)
 }
 
 

@@ -12,7 +12,7 @@ admin.site.register(Sprzedaz)
 @admin.register(Task)
 class TaskAdmin(admin.ModelAdmin):
     form = TaskForm  # Użycie niestandardowego formularza
-    list_display = ('nazwa', 'data_od', 'data_do', 'minimalna_liczba_sztuk', 'premia_za_minimalna_liczbe')
+    list_display = ('nazwa', 'data_od', 'data_do', 'prog_ilosc_1', 'prog_premia_1', 'prog_ilosc_2', 'prog_premia_2')
     search_fields = ('nazwa',)
     list_filter = ('data_od', 'data_do',)
     filter_horizontal = ('produkty',)

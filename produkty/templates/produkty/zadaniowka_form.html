@@ -1,100 +1,90 @@
 {% extends 'produkty/base.html' %}
 
 {% block title %}
-    {% if zadaniowka %}Edytuj Zadaniówkę{% else %}Dodaj Nową Zadaniówkę{% endif %}
+    {% if form.instance.pk %}Edytuj Zadaniówkę{% else %}Dodaj Nową Zadaniówkę{% endif %}
 {% endblock %}
 
 {% block content %}
 <div class="container mt-4">
-    <h2>{% if zadaniowka %}Edytuj Zadaniówkę{% else %}Dodaj Nową Zadaniówkę{% endif %}</h2>
+    <h2>{% if form.instance.pk %}Edytuj Zadaniówkę{% else %}Dodaj Nową Zadaniówkę{% endif %}</h2>
+
+    <form method="get" class="mb-4">
+        <div class="row align-items-end">
+            <div class="col-md-8">
+                <label for="product-filter" class="form-label">Filtruj produkty</label>
+                <input type="text" id="product-filter" name="product_filter" class="form-control" 
+                       placeholder="Wpisz, aby filtrować..." value="{{ product_filter|default:'' }}">
+            </div>
+            <div class="col-md-4">
+                <button type="submit" class="btn btn-secondary w-100">Filtruj</button>
+            </div>
+        </div>
+    </form>
     
     <form method="post" class="mt-4">
         {% csrf_token %}
         
-        <div class="row">
-            <div class="col-md-6 mb-3">
-                <label for="nazwa" class="form-label">Nazwa zadaniówki</label>
-                <input type="text" class="form-control" id="nazwa" name="nazwa" value="{{ zadaniowka.nazwa|default:'' }}" required>
+        {% if form.non_field_errors %}
+            <div class="alert alert-danger">
+                {{ form.non_field_errors }}
             </div>
-
-            <div class="col-md-6 mb-3">
-                <label for="typ" class="form-label">Typ zadaniówki</label>
-                <select class="form-select" id="typ" name="typ">
-                    <option value="MIX_PROWIZJA" {% if zadaniowka.typ == 'MIX_PROWIZJA' %}selected{% endif %}>Mix prowizja</option>
-                    <option value="MIX_MNOZNIK" {% if zadaniowka.typ == 'MIX_MNOZNIK' %}selected{% endif %}>Mix mnożnik</option>
-                    <option value="KONKRETNE_MODELE" {% if zadaniowka.typ == 'KONKRETNE_MODELE' or not zadaniowka %}selected{% endif %}>Konkretne modele</option>
-                </select>
-            </div>
-        </div>
+        {% endif %}
 
         <div class="row">
-            <div class="col-md-6 mb-3 konkretne-modele-only">
-                <label for="minimalna_liczba_sztuk" class="form-label">Minimalna liczba sztuk</label>
-                <input type="number" class="form-control" id="minimalna_liczba_sztuk" name="minimalna_liczba_sztuk" value="{{ zadaniowka.minimalna_liczba_sztuk|default:'0' }}" min="0">
+            <div class="col-md-6 mb-3">
+                <label for="{{ form.nazwa.id_for_label }}" class="form-label">{{ form.nazwa.label }}</label>
+                {{ form.nazwa }}
+                {% if form.nazwa.errors %}<div class="invalid-feedback d-block">{{ form.nazwa.errors }}</div>{% endif %}
             </div>
-
-            <div class="col-md-6 mb-3 mix-prowizja-only mix-mnoznik-only">
-                <label for="prog_mix" class="form-label">Próg mixu</label>
-                <input type="number" class="form-control" id="prog_mix" name="prog_mix" value="{{ zadaniowka.prog_mix|default:'0' }}" min="0">
+            <div class="col-md-6 mb-3">
+                <label for="{{ form.data_od.id_for_label }}" class="form-label">{{ form.data_od.label }}</label>
+                {{ form.data_od }}
+                {% if form.data_od.errors %}<div class="invalid-feedback d-block">{{ form.data_od.errors }}</div>{% endif %}
             </div>
         </div>
 
         <div class="row">
             <div class="col-md-6 mb-3">
-                <label for="data_od" class="form-label">Data rozpoczęcia</label>
-                <input type="date" class="form-control" id="data_od" name="data_od" value="{{ zadaniowka.data_od|date:'Y-m-d'|default:'' }}" required>
+                <label for="{{ form.data_do.id_for_label }}" class="form-label">{{ form.data_do.label }}</label>
+                {{ form.data_do }}
+                {% if form.data_do.errors %}<div class="invalid-feedback d-block">{{ form.data_do.errors }}</div>{% endif %}
             </div>
-
             <div class="col-md-6 mb-3">
-                <label for="data_do" class="form-label">Data zakończenia</label>
-                <input type="date" class="form-control" id="data_do" name="data_do" value="{{ zadaniowka.data_do|date:'Y-m-d'|default:'' }}" required>
+                <label for="{{ form.opis.id_for_label }}" class="form-label">{{ form.opis.label }}</label>
+                {{ form.opis }}
+                {% if form.opis.errors %}<div class="invalid-feedback d-block">{{ form.opis.errors }}</div>{% endif %}
+            </div>
+        </div>
+
+        <div id="konkretne-modele-fields" class="mb-3">
+            <label for="{{ form.produkty.id_for_label }}" class="form-label">{{ form.produkty.label }}</label>
+            {{ form.produkty }}
+            {% if form.produkty.errors %}<div class="invalid-feedback d-block">{{ form.produkty.errors }}</div>{% endif %}
+        </div>
+
+        <div class="row">
+            <div class="col-md-6 mb-3">
+                <label for="{{ form.prog_ilosc_1.id_for_label }}" class="form-label">{{ form.prog_ilosc_1.label }}</label>
+                {{ form.prog_ilosc_1 }}
+                {% if form.prog_ilosc_1.errors %}<div class="invalid-feedback d-block">{{ form.prog_ilosc_1.errors }}</div>{% endif %}
+            </div>
+            <div class="col-md-6 mb-3">
+                <label for="{{ form.prog_premia_1.id_for_label }}" class="form-label">{{ form.prog_premia_1.label }}</label>
+                {{ form.prog_premia_1 }}
+                {% if form.prog_premia_1.errors %}<div class="invalid-feedback d-block">{{ form.prog_premia_1.errors }}</div>{% endif %}
             </div>
         </div>
 
         <div class="row">
-            <div class="col-md-3 mb-3">
-                <label for="mnoznik_stawki" class="form-label">Mnożnik stawki</label>
-                <input type="number" class="form-control" id="mnoznik_stawki" name="mnoznik_stawki" value="{{ zadaniowka.mnoznik_stawki|default:'1.0' }}" step="0.01" min="0">
+            <div class="col-md-6 mb-3">
+                <label for="{{ form.prog_ilosc_2.id_for_label }}" class="form-label">{{ form.prog_ilosc_2.label }}</label>
+                {{ form.prog_ilosc_2 }}
+                {% if form.prog_ilosc_2.errors %}<div class="invalid-feedback d-block">{{ form.prog_ilosc_2.errors }}</div>{% endif %}
             </div>
-
-            <div class="col-md-3 mb-3 mix-mnoznik-only">
-                <label for="mnoznik_mix" class="form-label">Mnożnik mixu</label>
-                <input type="number" class="form-control" id="mnoznik_mix" name="mnoznik_mix" value="{{ zadaniowka.mnoznik_mix|default:'' }}" step="0.01" min="0">
-            </div>
-
-            <div class="col-md-3 mb-3 mix-prowizja-only konkretne-modele-only">
-                <label for="premia_za_minimalna_liczbe" class="form-label">Premia za min. liczbę</label>
-                <input type="number" class="form-control" id="premia_za_minimalna_liczbe" name="premia_za_minimalna_liczbe" value="{{ zadaniowka.premia_za_minimalna_liczbe|default:'0' }}" step="0.01" min="0">
-            </div>
-
-            <div class="col-md-3 mb-3 konkretne-modele-only">
-                <label for="premia_za_dodatkowa_liczbe" class="form-label">Premia za dodatkową</label>
-                <input type="number" class="form-control" id="premia_za_dodatkowa_liczbe" name="premia_za_dodatkowa_liczbe" value="{{ zadaniowka.premia_za_dodatkowa_liczbe|default:'0' }}" step="0.01" min="0">
-            </div>
-        </div>
-        
-        <div class="mb-3">
-            <label for="opis" class="form-label">Opis zadaniówki</label>
-            <textarea class="form-control" id="opis" name="opis" rows="3">{{ zadaniowka.opis|default:'' }}</textarea>
-        </div>
-        
-        <div class="mb-3">
-            <label class="form-label">Produkty</label>
-            <input type="text" id="product-filter" class="form-control mb-2" placeholder="Filtruj produkty...">
-            <div class="border p-3" style="max-height: 300px; overflow-y: auto;">
-                <div class="row" id="product-list">
-                    {% for produkt in produkty %}
-                    <div class="col-md-4 mb-2">
-                        <div class="form-check">
-                            <input class="form-check-input" type="checkbox" name="produkty" id="produkt_{{ produkt.id }}" value="{{ produkt.id }}"
-                                {% if wybrane_produkty and produkt.id in wybrane_produkty %}checked{% endif %}>
-                            <label class="form-check-label" for="produkt_{{ produkt.id }}">
-                                {{ produkt.marka }} - {{ produkt.model }}
-                            </label>
-                        </div>
-                    </div>
-                    {% endfor %}
-                </div>
+            <div class="col-md-6 mb-3">
+                <label for="{{ form.prog_premia_2.id_for_label }}" class="form-label">{{ form.prog_premia_2.label }}</label>
+                {{ form.prog_premia_2 }}
+                {% if form.prog_premia_2.errors %}<div class="invalid-feedback d-block">{{ form.prog_premia_2.errors }}</div>{% endif %}
             </div>
         </div>
         
@@ -104,4 +94,4 @@
         </div>
     </form>
 </div>
-{% endblock %} 
+{% endblock %}
