@@ -33,8 +33,8 @@ def home(request):
     start_of_week = today - timedelta(days=today.weekday())
     start_of_month = today.replace(day=1)
 
-    sprzedaz_tygodniowa = Sprzedaz.objects.filter(data_sprzedazy__gte=start_of_week)
-    sprzedaz_miesieczna = Sprzedaz.objects.filter(data_sprzedazy__gte=start_of_month)
+    sprzedaz_tygodniowa = Sprzedaz.objects.filter(data_sprzedazy__gte=start_of_week).select_related('produkt')
+    sprzedaz_miesieczna = Sprzedaz.objects.filter(data_sprzedazy__gte=start_of_month).select_related('produkt')
 
     # Obliczanie sum prowizji
     tygodniowa_suma = sum(
