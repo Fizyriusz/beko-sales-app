@@ -1,0 +1,20 @@
+{% extends 'produkty/base.html' %}
+
+{% block title %}Usuń Zadanie{% endblock %}
+
+{% block content %}
+<div class="container mt-4">
+    <h2>Usuń Zadanie</h2>
+    
+    <div class="alert alert-danger">
+        <p>Czy na pewno chcesz usunąć zadanie "{{ zadanie.nazwa }}"?</p>
+        <p>Ta operacja jest nieodwracalna.</p>
+    </div>
+    
+    <form method="post">
+        {% csrf_token %}
+        <button type="submit" class="btn btn-danger">Tak, usuń</button>
+        <a href="{% url 'produkty:lista_zadan' %}" class="btn btn-secondary">Anuluj</a>
+    </form>
+</div>
+{% endblock %} 

@@ -20,20 +20,10 @@ urlpatterns = [
     path('zadania/usun/<int:zadanie_id>/', views.zadanie_usun, name='usun_zadanie'),
     path('zadania/<int:zadanie_id>/', views.szczegoly_zadania, name='szczegoly_zadania'),
 
-  # Nowe ścieżki do widoków związanych z zadaniówkami
-    path('zadaniowki/', views.lista_zadaniowek, name='lista_zadaniowek'),
-    path('zadaniowki/<int:task_id>/', views.szczegoly_zadaniowki, name='szczegoly_zadaniowki'),
-    path('zadaniowka/<int:task_id>/postepy/', views.postepy_zadaniowki, name='postepy_zadaniowki'),
     path('ekspozycja/<int:grupa_id>/', views.ekspozycja_form, name='ekspozycja_form'),
     path('ekspozycja-summary/', views.ekspozycja_summary, name='ekspozycja_summary'),
     path('ekspozycja-export/', views.eksportuj_ekspozycje_xlsx, name='ekspozycja_export'),
     path('klienci/', views.klienci, name='klienci'),
     path('klienci/zmien/<str:operacja>/', views.zmien_licznik, name='zmien_licznik'),
     path('import/delete-all/', views.delete_all_models, name='delete_all_models'),
-    
-    # Zarządzanie zadaniówkami
-    path('zadaniowki-management/', views.zadaniowki_management, name='zadaniowki_management'),
-    path('zadaniowki-management/dodaj/', views.zadaniowka_dodaj, name='zadaniowka_dodaj'),
-    path('zadaniowki-management/edytuj/<int:zadaniowka_id>/', views.zadaniowka_edytuj, name='zadaniowka_edytuj'),
-    path('zadaniowki-management/usun/<int:zadaniowka_id>/', views.zadaniowka_usun, name='zadaniowka_usun'),
 ]

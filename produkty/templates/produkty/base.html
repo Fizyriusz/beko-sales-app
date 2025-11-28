@@ -32,17 +32,10 @@
                 <li><a href="{% url 'produkty:sprzedaz' %}"><i class="fas fa-cash-register"></i> Rejestracja Sprzedaży</a></li>
                 <li><a href="{% url 'produkty:podsumowanie_sprzedazy' %}"><i class="fas fa-chart-bar"></i> Podsumowanie Sprzedaży</a></li>
                 <li class="has-submenu">
-                    <a href="#" class="submenu-toggle"><i class="fas fa-bullseye"></i> Nowe Zadania <i class="fas fa-chevron-down float-end"></i></a>
+                    <a href="#" class="submenu-toggle"><i class="fas fa-bullseye"></i> Zadania <i class="fas fa-chevron-down float-end"></i></a>
                     <ul class="submenu">
                         <li><a href="{% url 'produkty:lista_zadan' %}">Lista Zadań</a></li>
                         <li><a href="{% url 'produkty:nowe_zadanie' %}">Dodaj Zadanie</a></li>
-                    </ul>
-                </li>
-                <li class="has-submenu">
-                    <a href="#" class="submenu-toggle"><i class="fas fa-tasks"></i> Zadania <i class="fas fa-chevron-down float-end"></i></a>
-                    <ul class="submenu">
-                        <li><a href="{% url 'produkty:lista_zadaniowek' %}">Zadaniówki</a></li>
-                        <li><a href="{% url 'produkty:zadaniowki_management' %}">Zarządzanie Zadaniówkami</a></li>
                     </ul>
                 </li>
                 <li class="has-submenu">
@@ -74,8 +67,6 @@
         </div>
     </div>
 
-    <script src="{% static 'produkty/js/zadaniowka_filter.js' %}"></script>
-    <script src="{% static 'produkty/js/zadaniowka_form.js' %}"></script>
     <script>
     document.addEventListener('DOMContentLoaded', () => {
         const sidebar = document.getElementById('sidebar');

@@ -10,42 +10,23 @@
         </div>
         <div class="card-body">
             <p><strong>Okres:</strong> od {{ zadanie.data_start }} do {{ zadanie.data_koniec }}</p>
-            <p><strong>Cel:</strong> {{ zadanie.get_target_display }}</p>
 
             <hr>
 
             <h4>Postęp realizacji</h4>
-            
-            <div class="progress" style="height: 30px;">
-                <div class="progress-bar progress-bar-striped progress-bar-animated" role="progressbar" style="width: {{ procent_realizacji }}%;" aria-valuenow="{{ procent_realizacji }}" aria-valuemin="0" aria-valuemax="100">
-                    {{ procent_realizacji|floatformat:2 }}%
-                </div>
-            </div>
-            <p class="mt-2">
-                <strong>Osiągnięto:</strong> 
-                {{ postep }} / {{ cel }} 
-                {% if zadanie.target == 'ilosc' %}sztuk{% else %}PLN{% endif %}
+            <p>
+                <strong>Sprzedano:</strong> {{ postep }} sztuk
             </p>
 
             <div>
                 {% if zadanie.prog_1 %}
                 <span class="badge {% if prog_1_status %}bg-success{% else %}bg-secondary{% endif %}">
-                    Próg 1: {{ zadanie.prog_1 }}{% if zadanie.target == 'ilosc' %} szt.{% endif %} {% if prog_1_status %}(Osiągnięty){% else %}(Nieosiągnięty){% endif %}
+                    Próg 1: {{ zadanie.prog_1 }} szt. {% if prog_1_status %}(Osiągnięty){% else %}(Nieosiągnięty){% endif %}
                 </span>
                 {% endif %}
                 {% if zadanie.prog_2 %}
                 <span class="badge {% if prog_2_status %}bg-success{% else %}bg-secondary{% endif %}">
-                    Próg 2: {{ zadanie.prog_2 }}{% if zadanie.target == 'ilosc' %} szt.{% endif %} {% if prog_2_status %}(Osiągnięty){% else %}(Nieosiągnięty){% endif %}
-                </span>
-                {% endif %}
-                 {% if zadanie.prog_1_premia %}
-                <span class="badge {% if prog_1_status %}bg-success{% else %}bg-secondary{% endif %}">
-                    Próg 1: {{ zadanie.prog_1_premia }}{% if zadanie.target != 'ilosc' %} PLN{% endif %} {% if prog_1_status %}(Osiągnięty){% else %}(Nieosiągnięty){% endif %}
-                </span>
-                {% endif %}
-                {% if zadanie.prog_2_premia %}
-                <span class="badge {% if prog_2_status %}bg-success{% else %}bg-secondary{% endif %}">
-                    Próg 2: {{ zadanie.prog_2_premia }}{% if zadanie.target != 'ilosc' %} PLN{% endif %} {% if prog_2_status %}(Osiągnięty){% else %}(Nieosiągnięty){% endif %}
+                    Próg 2: {{ zadanie.prog_2 }} szt. {% if prog_2_status %}(Osiągnięty){% else %}(Nieosiągnięty){% endif %}
                 </span>
                 {% endif %}
             </div>
@@ -62,7 +43,6 @@
                                 <th>Model</th>
                                 <th>Marka</th>
                                 <th>Sprzedana ilość</th>
-                                <th>Wartość sprzedaży</th>
                             </tr>
                         </thead>
                         <tbody>
@@ -71,7 +51,6 @@
                                 <td>{{ model.produkt__model }}</td>
                                 <td>{{ model.produkt__marka }}</td>
                                 <td>{{ model.ilosc }}</td>
-                                <td>{{ model.wartosc|floatformat:2 }} PLN</td>
                             </tr>
                             {% endfor %}
                         </tbody>

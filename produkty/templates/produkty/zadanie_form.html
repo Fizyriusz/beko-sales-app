@@ -1,4 +1,5 @@
 {% extends 'produkty/base.html' %}
+{% load static %}
 
 {% block title %}
     {% if form.instance.pk %}Edytuj Zadanie{% else %}Dodaj Nowe Zadanie{% endif %}
@@ -24,13 +25,18 @@
                 {% if form.nazwa.errors %}<div class="invalid-feedback d-block">{{ form.nazwa.errors }}</div>{% endif %}
             </div>
             <div class="col-md-6 mb-3">
-                <label for="{{ form.data_start.id_for_label }}" class="form-label">{{ form.data_start.label }}</label>
-                {{ form.data_start }}
-                {% if form.data_start.errors %}<div class="invalid-feedback d-block">{{ form.data_start.errors }}</div>{% endif %}
+                <label for="{{ form.opis.id_for_label }}" class="form-label">{{ form.opis.label }}</label>
+                {{ form.opis }}
+                {% if form.opis.errors %}<div class="invalid-feedback d-block">{{ form.opis.errors }}</div>{% endif %}
             </div>
         </div>
 
         <div class="row">
+            <div class="col-md-6 mb-3">
+                <label for="{{ form.data_start.id_for_label }}" class="form-label">{{ form.data_start.label }}</label>
+                {{ form.data_start }}
+                {% if form.data_start.errors %}<div class="invalid-feedback d-block">{{ form.data_start.errors }}</div>{% endif %}
+            </div>
             <div class="col-md-6 mb-3">
                 <label for="{{ form.data_koniec.id_for_label }}" class="form-label">{{ form.data_koniec.label }}</label>
                 {{ form.data_koniec }}
@@ -38,40 +44,38 @@
             </div>
         </div>
 
-
-        <div id="konkretne-modele-fields" class="mb-3">
-            <label class="form-label">{{ form.produkty.label }}</label>
-            <div style="display: none;">
-                {{ form.produkty }}
+        <div class="row">
+            <div class="col-md-12">
+                <label for="product-filter" class="form-label">Filtruj produkty</label>
+                <input type="text" id="product-filter" class="form-control mb-2" placeholder="Wpisz nazwę produktu...">
             </div>
-
-            <div class="row">
-                <!-- Available Products -->
-                <div class="col-md-6">
-                    <input type="text" id="product-filter" class="form-control mb-2" placeholder="Filtruj produkty...">
-                    <div id="available-products" class="list-group" style="height: 300px; overflow-y: scroll;">
-                        {% for product in all_products %}
-                            <a href="#" class="list-group-item list-group-item-action" data-value="{{ product.pk }}">{{ product.model }}</a>
-                        {% endfor %}
-                    </div>
-                </div>
-                <!-- Selected Products -->
-                <div class="col-md-6">
-                    <h5 class="text-center">Wybrane produkty</h5>
-                    <div id="selected-products" class="list-group" style="height: 300px; overflow-y: scroll;">
-                        {% if form.instance.pk %}
-                            {% for product in form.instance.produkty.all %}
-                                <a href="#" class="list-group-item list-group-item-action" data-value="{{ product.pk }}">{{ product.model }}</a>
-                            {% endfor %}
-                        {% endif %}
-                    </div>
-                </div>
-            </div>
-            {% if form.produkty.errors %}<div class="invalid-feedback d-block">{{ form.produkty.errors }}</div>{% endif %}
         </div>
 
-
         <div class="row">
+            <div class="col-md-6">
+                <h5>Dostępne produkty</h5>
+                <div id="available-products" class="list-group" style="height: 300px; overflow-y: auto; border: 1px solid #ddd; padding: 5px;">
+                    {% for product in form.produkty.field.queryset %}
+                        {% if product.pk not in selected_products_pks %}
+                            <a href="#" class="list-group-item list-group-item-action" data-value="{{ product.pk }}">{{ product.model }}</a>
+                        {% endif %}
+                    {% endfor %}
+                </div>
+            </div>
+            <div class="col-md-6">
+                <h5>Wybrane produkty</h5>
+                <div id="selected-products" class="list-group" style="height: 300px; overflow-y: auto; border: 1px solid #ddd; padding: 5px;">
+                    {% for product in form.produkty.field.queryset %}
+                        {% if product.pk in selected_products_pks %}
+                            <a href="#" class="list-group-item list-group-item-action" data-value="{{ product.pk }}">{{ product.model }}</a>
+                        {% endif %}
+                    {% endfor %}
+                </div>
+            </div>
+        </div>
+        <div style="display:none;">{{ form.produkty }}</div>
+
+        <div class="row mt-3">
             <div class="col-md-6 mb-3">
                 <label for="{{ form.prog_1.id_for_label }}" class="form-label">{{ form.prog_1.label }}</label>
                 {{ form.prog_1 }}
@@ -83,16 +87,16 @@
                 {% if form.prog_2.errors %}<div class="invalid-feedback d-block">{{ form.prog_2.errors }}</div>{% endif %}
             </div>
         </div>
-        
+
         <div class="mb-3">
             <button type="submit" class="btn btn-primary">Zapisz</button>
             <a href="{% url 'produkty:lista_zadan' %}" class="btn btn-secondary">Anuluj</a>
         </div>
     
-        </form>
-    </div>
-    
-    {% load static %}
-    <script src="{% static 'produkty/js/zadanie_form.js' %}"></script>
-    {% endblock %}
-    
+    </form>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script src="{% static 'produkty/js/zadanie_form.js' %}"></script>
+{% endblock %}

@@ -1,6 +1,6 @@
 from django.shortcuts import render, redirect, get_object_or_404
-from .models import Produkt, Sprzedaz, Task, Zadanie, Ekspozycja, GrupaProduktowa, Marka, KlientCounter
-from .forms import TaskForm, ZadanieForm
+from .models import Produkt, Sprzedaz, Zadanie, Ekspozycja, GrupaProduktowa, Marka, KlientCounter
+from .forms import ZadanieForm
 import openpyxl
 from openpyxl.utils.exceptions import InvalidFileException
 from zipfile import BadZipFile
@@ -140,16 +140,16 @@ def _zapisz_sprzedaz_i_zadania(zatwierdzone_modele, data_sprzedazy):
             liczba_sztuk=1
         )
 
-        wszystkie_zadania = Task.objects.filter(data_od__lte=data_sprzedazy, data_do__gte=data_sprzedazy)
+        wszystkie_zadania = Zadanie.objects.filter(data_start__lte=data_sprzedazy, data_koniec__gte=data_sprzedazy)
         for zadanie in wszystkie_zadania:
             if produkt in zadanie.produkty.all():
                 sprzedane = Sprzedaz.objects.filter(
                     produkt__in=zadanie.produkty.all(),
-                    data_sprzedazy__range=[zadanie.data_od, zadanie.data_do]
+                    data_sprzedazy__range=[zadanie.data_start, zadanie.data_koniec]
                 ).aggregate(models.Sum('liczba_sztuk'))['liczba_sztuk__sum'] or 0
 
-                if sprzedane >= zadanie.minimalna_liczba_sztuk:
-                    sprzedaz.prowizja = produkt.stawka * zadanie.mnoznik_stawki
+                if zadanie.typ == 'MIX_MNOZNIK' and sprzedane >= zadanie.prog_mix:
+                    sprzedaz.prowizja = produkt.stawka * zadanie.mnoznik_mix
                     sprzedaz.save()
 
 
@@ -243,21 +243,21 @@ def podsumowanie_sprzedazy(request):
     sprzedaz_podsumowanie = {}
 
     # Pobieranie aktywnych zadań
-    aktywne_zadania = Task.objects.filter(data_od__lte=end_date, data_do__gte=start_date)
+    aktywne_zadania = Zadanie.objects.filter(data_start__lte=end_date, data_koniec__gte=start_date)
 
     task_rewards = []
 
     for zadanie in aktywne_zadania:
         sprzedane = Sprzedaz.objects.filter(
             produkt__in=zadanie.produkty.all(),
-            data_sprzedazy__range=[zadanie.data_od, zadanie.data_do]
+            data_sprzedazy__range=[zadanie.data_start, zadanie.data_koniec]
         ).aggregate(Sum('liczba_sztuk'))['liczba_sztuk__sum'] or 0
 
         premia = 0
-        if zadanie.prog_ilosc_1 and sprzedane >= zadanie.prog_ilosc_1:
-            premia = zadanie.prog_premia_1
-        if zadanie.prog_ilosc_2 and sprzedane >= zadanie.prog_ilosc_2:
-            premia = zadanie.prog_premia_2
+        if zadanie.prog_1 and sprzedane >= zadanie.prog_1:
+            premia = zadanie.prog_1_premia
+        if zadanie.prog_2 and sprzedane >= zadanie.prog_2:
+            premia = zadanie.prog_2_premia
         
         if premia > 0:
             task_rewards.append({
@@ -320,30 +320,7 @@ def wyciagnij_liste_modeli(request):
     else:
         return render(request, 'produkty/wyciagnij_liste_modeli.html')
 
-@login_required
-def lista_zadaniowek(request):
-    zadaniowki = Task.objects.all()
-    return render(request, 'produkty/lista_zadaniowek.html', {'zadaniowki': zadaniowki})
 
-@login_required
-def szczegoly_zadaniowki(request, task_id):
-    zadaniowka = get_object_or_404(Task, pk=task_id)
-    return render(request, 'produkty/szczegoly_zadaniowki.html', {'zadaniowka': zadaniowka})
-
-@login_required
-def postepy_zadaniowki(request, task_id):
-    zadaniowka = get_object_or_404(Task, id=task_id)
-    produkty = zadaniowka.produkty.all()
-    total_sprzedane_sztuki = Sprzedaz.objects.filter(produkt__in=produkty).aggregate(models.Sum('liczba_sztuk'))['liczba_sztuk__sum'] or 0
-    pozostaly_cel = max(0, zadaniowka.minimalna_liczba_sztuk - total_sprzedane_sztuki)
-
-    context = {
-        'zadaniowka': zadaniowka,
-        'produkty': produkty,
-        'total_sprzedane_sztuki': total_sprzedane_sztuki,
-        'pozostaly_cel': pozostaly_cel,
-    }
-    return render(request, 'produkty/postepy_zadaniowki.html', context)
 
 @login_required
 def ekspozycja_form(request, grupa_id):
@@ -588,60 +565,10 @@ def delete_all_models(request):
     return redirect('produkty:import_excel')
 
 @login_required
-def zadaniowki_management(request):
-    """Widok do zarządzania zadaniówkami"""
-    zadaniowki = Task.objects.all().order_by('-data_od')
-    return render(request, 'produkty/zadaniowki_management.html', {'zadaniowki': zadaniowki})
-
-@login_required
-def zadaniowka_dodaj(request):
-    """Widok do dodawania nowej zadaniówki"""
-    product_filter = request.GET.get('product_filter', '')
-    produkty_queryset = Produkt.objects.all()
-
-    if product_filter:
-        produkty_queryset = produkty_queryset.filter(model__icontains=product_filter)
-
-    if request.method == 'POST':
-        form = TaskForm(request.POST, produkty_queryset=produkty_queryset)
-        if form.is_valid():
-            form.save()
-            return redirect('produkty:zadaniowki_management')
-    else:
-        form = TaskForm(produkty_queryset=produkty_queryset)
-    
-    return render(request, 'produkty/zadaniowka_form.html', {'form': form, 'product_filter': product_filter})
-
-@login_required
-def zadaniowka_edytuj(request, zadaniowka_id):
-    """Widok do edycji istniejącej zadaniówki"""
-    zadaniowka = get_object_or_404(Task, id=zadaniowka_id)
-    product_filter = request.GET.get('product_filter', '')
-    produkty_queryset = Produkt.objects.all()
-
-    if product_filter:
-        produkty_queryset = produkty_queryset.filter(model__icontains=product_filter)
-    
-    if request.method == 'POST':
-        form = TaskForm(request.POST, instance=zadaniowka, produkty_queryset=produkty_queryset)
-        if form.is_valid():
-            form.save()
-            return redirect('produkty:zadaniowki_management')
-    else:
-        form = TaskForm(instance=zadaniowka, produkty_queryset=produkty_queryset)
-    
-    return render(request, 'produkty/zadaniowka_form.html', {'form': form, 'product_filter': product_filter})
-
-@login_required
-def zadaniowka_usun(request, zadaniowka_id):
-    """Widok do usuwania zadaniówki"""
-    zadaniowka = get_object_or_404(Task, id=zadaniowka_id)
-    
-    if request.method == 'POST':
-        zadaniowka.delete()
-        return redirect('produkty:zadaniowki_management')
-    
-    return render(request, 'produkty/zadaniowka_usun.html', {'zadaniowka': zadaniowka})
+def zadania_management(request):
+    """Widok do zarządzania zadaniami"""
+    zadania = Zadanie.objects.all().order_by('-data_start')
+    return render(request, 'produkty/zadania_management.html', {'zadania': zadania})
 
 @login_required
 def zadania_management(request):
@@ -656,13 +583,14 @@ def zadanie_dodaj(request):
         form = ZadanieForm(request.POST)
         if form.is_valid():
             form.save()
-            return redirect('produkty:zadania_management')
+            return redirect('produkty:lista_zadan')
     else:
         form = ZadanieForm()
     
-    all_products = Produkt.objects.all()
-    
-    return render(request, 'produkty/zadanie_form.html', {'form': form, 'all_products': all_products})
+    return render(request, 'produkty/zadanie_form.html', {
+        'form': form,
+        'selected_products_pks': []
+    })
 
 @login_required
 def zadanie_edytuj(request, zadanie_id):
@@ -673,13 +601,17 @@ def zadanie_edytuj(request, zadanie_id):
         form = ZadanieForm(request.POST, instance=zadanie)
         if form.is_valid():
             form.save()
-            return redirect('produkty:zadania_management')
+            return redirect('produkty:lista_zadan')
     else:
         form = ZadanieForm(instance=zadanie)
-    
-    all_products = Produkt.objects.all()
 
-    return render(request, 'produkty/zadanie_form.html', {'form': form, 'all_products': all_products, 'zadanie': zadanie})
+    selected_products_pks = list(zadanie.produkty.values_list('pk', flat=True))
+
+    return render(request, 'produkty/zadanie_form.html', {
+        'form': form, 
+        'zadanie': zadanie,
+        'selected_products_pks': selected_products_pks
+    })
 
 @login_required
 def zadanie_usun(request, zadanie_id):
@@ -702,47 +634,22 @@ def szczegoly_zadania(request, zadanie_id):
         data_sprzedazy__range=(zadanie.data_start, zadanie.data_koniec)
     )
 
-    postep = 0
-    cel = 0
+    postep = sprzedaz_w_okresie.aggregate(suma=Sum('liczba_sztuk'))['suma'] or 0
     prog_1_status = False
+    if zadanie.prog_1 and postep >= zadanie.prog_1:
+        prog_1_status = True
+
     prog_2_status = False
-
-    if zadanie.target == 'ilosc':
-        postep = sprzedaz_w_okresie.aggregate(suma=Sum('liczba_sztuk'))['suma'] or 0
-        if zadanie.prog_1:
-            cel = zadanie.prog_1
-            if postep >= zadanie.prog_1:
-                prog_1_status = True
-        if zadanie.prog_2:
-            cel = zadanie.prog_2 # Ustawiamy cel na najwyższy próg
-            if postep >= zadanie.prog_2:
-                prog_2_status = True
-
-    else: # wartościowy
-        postep = sprzedaz_w_okresie.annotate(
-            wartosc=models.F('liczba_sztuk') * models.F('produkt__stawka')
-        ).aggregate(suma=Sum('wartosc'))['suma'] or 0
-        if zadanie.prog_1_premia:
-            cel = zadanie.prog_1_premia
-            if postep >= zadanie.prog_1_premia:
-                prog_1_status = True
-        if zadanie.prog_2_premia:
-            cel = zadanie.prog_2_premia # Ustawiamy cel na najwyższy próg
-            if postep >= zadanie.prog_2_premia:
-                prog_2_status = True
-    
-    procent_realizacji = (postep / cel * 100) if cel and cel > 0 else 0
+    if zadanie.prog_2 and postep >= zadanie.prog_2:
+        prog_2_status = True
 
     sprzedane_modele = sprzedaz_w_okresie.values('produkt__model', 'produkt__marka').annotate(
-        ilosc=Sum('liczba_sztuk'),
-        wartosc=Sum(models.F('liczba_sztuk') * models.F('produkt__stawka'))
+        ilosc=Sum('liczba_sztuk')
     ).order_by('-ilosc')
 
     context = {
         'zadanie': zadanie,
         'postep': postep,
-        'cel': cel,
-        'procent_realizacji': procent_realizacji,
         'sprzedane_modele': sprzedane_modele,
         'modele_w_zadaniu': modele_w_zadaniu,
         'prog_1_status': prog_1_status,

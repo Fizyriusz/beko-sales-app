@@ -1,6 +1,6 @@
 from django.contrib import admin
-from .models import Produkt, Sprzedaz, Task, GrupaProduktowa, Marka, Ekspozycja
-from .forms import TaskForm  # Importujemy formularz
+from .models import Produkt, Sprzedaz, Zadanie, GrupaProduktowa, Marka, Ekspozycja
+from .forms import ZadanieForm
 
 # Rejestracja modelu Produkt w panelu admina
 admin.site.register(Produkt)
@@ -8,15 +8,15 @@ admin.site.register(Produkt)
 # Rejestracja modelu Sprzedaz w panelu admina
 admin.site.register(Sprzedaz)
 
-# Rejestracja modelu Task z niestandardowym formularzem w panelu admina
-@admin.register(Task)
-class TaskAdmin(admin.ModelAdmin):
-    form = TaskForm  # Użycie niestandardowego formularza
-    list_display = ('nazwa', 'data_od', 'data_do', 'prog_ilosc_1', 'prog_premia_1', 'prog_ilosc_2', 'prog_premia_2')
+# Rejestracja modelu Zadanie z niestandardowym formularzem w panelu admina
+@admin.register(Zadanie)
+class ZadanieAdmin(admin.ModelAdmin):
+    form = ZadanieForm
+    list_display = ('nazwa', 'data_start', 'data_koniec', 'prog_1', 'prog_1_premia', 'prog_2', 'prog_2_premia')
     search_fields = ('nazwa',)
-    list_filter = ('data_od', 'data_do',)
+    list_filter = ('data_start', 'data_koniec',)
     filter_horizontal = ('produkty',)
 
 admin.site.register(GrupaProduktowa)
 admin.site.register(Marka)
-admin.site.register(Ekspozycja)  # Opcjonalnie, jeśli chcesz podglądać dane ekspozycji
+admin.site.register(Ekspozycja)

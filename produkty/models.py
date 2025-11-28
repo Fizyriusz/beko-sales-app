@@ -11,25 +11,10 @@ class Produkt(models.Model):
     def __str__(self):
         return self.model
 
-class Task(models.Model):
+class Zadanie(models.Model):
     nazwa = models.CharField(max_length=255)
     opis = models.TextField(blank=True)
     produkty = models.ManyToManyField('Produkt', related_name='zadania', blank=True)
-    data_od = models.DateField()
-    data_do = models.DateField()
-
-    prog_ilosc_1 = models.PositiveIntegerField(null=True, blank=True)
-    prog_premia_1 = models.DecimalField(max_digits=10, decimal_places=2, null=True, blank=True)
-    prog_ilosc_2 = models.PositiveIntegerField(null=True, blank=True)
-    prog_premia_2 = models.DecimalField(max_digits=10, decimal_places=2, null=True, blank=True)
-
-    def __str__(self):
-        return f"{self.nazwa} ({self.data_od} - {self.data_do})"
-
-
-class Zadanie(models.Model):
-    nazwa = models.CharField(max_length=255)
-    produkty = models.ManyToManyField('Produkt', related_name='cele', blank=True)
     data_start = models.DateField()
     data_koniec = models.DateField()
     target = models.CharField(max_length=10, choices=[('ilosc', 'Ilość'), ('wartosc', 'Wartość')], default='ilosc')
@@ -37,17 +22,27 @@ class Zadanie(models.Model):
     prog_1_premia = models.DecimalField(max_digits=10, decimal_places=2, null=True, blank=True)
     prog_2 = models.PositiveIntegerField(null=True, blank=True)
     prog_2_premia = models.DecimalField(max_digits=10, decimal_places=2, null=True, blank=True)
+    mnoznik_mix = models.DecimalField(max_digits=4, decimal_places=2, null=True, blank=True, help_text="Mnożnik dla zadań typu mix")
+    prog_mix = models.PositiveIntegerField(null=True, blank=True, help_text="Próg dla zadań typu mix")
+    typ = models.CharField(
+        max_length=20,
+        choices=[
+            ("MIX_PROWIZJA", "Mix prowizja"),
+            ("MIX_MNOZNIK", "Mix mnożnik"),
+            ("KONKRETNE_MODELE", "Konkretne modele"),
+        ],
+        default="KONKRETNE_MODELE",
+    )
 
     def __str__(self):
         return f"{self.nazwa} ({self.data_start} - {self.data_koniec})"
-
 
 
 class Sprzedaz(models.Model):
     produkt = models.ForeignKey(Produkt, on_delete=models.CASCADE)
     liczba_sztuk = models.IntegerField()
     data_sprzedazy = models.DateField(auto_now_add=True)
-    task = models.ForeignKey(Task, on_delete=models.SET_NULL, null=True, blank=True)  # Dodajemy powiązanie z taskiem
+    zadanie = models.ForeignKey(Zadanie, on_delete=models.SET_NULL, null=True, blank=True)
 
     def __str__(self):
         return f"{self.produkt.model} - {self.liczba_sztuk} sztuk - {self.data_sprzedazy}"
