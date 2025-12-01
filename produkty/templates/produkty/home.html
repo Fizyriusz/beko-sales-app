@@ -60,80 +60,89 @@ Dashboard
     </div>
 
     <!-- Sekcja 3: Siatka Narzędzi -->
-    <h2 class="tools-header">Narzędzia i Akcje</h2>
-    <div class="row tools-grid">
-        <div class="col-lg-3 col-md-6 mb-4">
-            <a href="{% url 'produkty:lista_zadan' %}" class="tool-card-link">
-                <div class="tool-card">
-                    <div class="card-body">
-                        <i class="fas fa-bullseye tool-icon"></i>
-                        <h5 class="card-title">Nowe Zadania</h5>
+        <h2 class="tools-header">Narzędzia i Akcje</h2>
+        <div class="row tools-grid">
+            <div class="col-lg-3 col-md-6 mb-4">
+                <a href="{% url 'produkty:lista_zadan' %}" class="tool-card-link">
+                    <div class="tool-card">
+                        <div class="card-body">
+                            <i class="fas fa-bullseye tool-icon"></i>
+                            <h5 class="card-title">Lista Zadań</h5>
+                        </div>
                     </div>
-                </div>
-            </a>
-        </div>
-        <div class="col-lg-3 col-md-6 mb-4">
-            <a href="{% url 'produkty:podsumowanie_sprzedazy' %}" class="tool-card-link">
-                <div class="tool-card">
-                    <div class="card-body">
-                        <i class="fas fa-chart-line tool-icon"></i>
-                        <h5 class="card-title">Podsumowanie Sprzedaży</h5>
+                </a>
+            </div>
+            <div class="col-lg-3 col-md-6 mb-4">
+                <a href="{% url 'produkty:podsumowanie_sprzedazy' %}" class="tool-card-link">
+                    <div class="tool-card">
+                        <div class="card-body">
+                            <i class="fas fa-chart-line tool-icon"></i>
+                            <h5 class="card-title">Podsumowanie Sprzedaży</h5>
+                        </div>
                     </div>
-                </div>
-            </a>
-        </div>
-        <div class="col-lg-3 col-md-6 mb-4">
-            <a href="{% url 'produkty:lista_zadan' %}" class="tool-card-link">
-                <div class="tool-card">
-                    <div class="card-body">
-                        <i class="fas fa-tasks tool-icon"></i>
-                        <h5 class="card-title">Zadaniówki</h5>
+                </a>
+            </div>
+            <div class="col-lg-3 col-md-6 mb-4">
+                <a href="{% url 'produkty:calendar' %}" class="tool-card-link">
+                    <div class="tool-card">
+                        <div class="card-body">
+                            <i class="fas fa-calendar-alt tool-icon"></i>
+                            <h5 class="card-title">Kalendarz Sprzedaży</h5>
+                        </div>
                     </div>
-                </div>
-            </a>
-        </div>
-        <div class="col-lg-3 col-md-6 mb-4">
-            <a href="{% url 'produkty:ekspozycja_form' grupa_id=1 %}" class="tool-card-link">
-                <div class="tool-card">
-                    <div class="card-body">
-                        <i class="fas fa-boxes tool-icon"></i>
-                        <h5 class="card-title">Formularz Ekspozycji</h5>
+                </a>
+            </div>
+            <div class="col-lg-3 col-md-6 mb-4">
+                <a href="{% url 'produkty:ekspozycja_summary' %}" class="tool-card-link">
+                    <div class="tool-card">
+                        <div class="card-body">
+                            <i class="fas fa-clipboard-check tool-icon"></i>
+                            <h5 class="card-title">Podsumowanie Ekspozycji</h5>
+                        </div>
                     </div>
-                </div>
-            </a>
-        </div>
-        <div class="col-lg-3 col-md-6 mb-4">
-            <a href="{% url 'produkty:import_excel' %}" class="tool-card-link">
-                <div class="tool-card">
-                    <div class="card-body">
-                        <i class="fas fa-file-import tool-icon"></i>
-                        <h5 class="card-title">Import Produktów</h5>
+                </a>
+            </div>
+            <div class="col-lg-3 col-md-6 mb-4">
+                <a href="{% url 'produkty:ekspozycja_export' %}" class="tool-card-link">
+                    <div class="tool-card">
+                        <div class="card-body">
+                            <i class="fas fa-file-excel tool-icon"></i>
+                            <h5 class="card-title">Eksport Ekspozycji</h5>
+                        </div>
                     </div>
-                </div>
-            </a>
-        </div>
-         <div class="col-lg-3 col-md-6 mb-4">
-            <a href="{% url 'produkty:lista_zadan' %}" class="tool-card-link">
-                <div class="tool-card">
-                    <div class="card-body">
-                        <i class="fas fa-edit tool-icon"></i>
-                        <h5 class="card-title">Zarządzaj Zadaniówkami</h5>
+                </a>
+            </div>
+            <div class="col-lg-3 col-md-6 mb-4">
+                <a href="{% url 'produkty:nowe_zadanie' %}" class="tool-card-link">
+                    <div class="tool-card">
+                        <div class="card-body">
+                            <i class="fas fa-plus-circle tool-icon"></i>
+                            <h5 class="card-title">Dodaj Zadanie</h5>
+                        </div>
                     </div>
-                </div>
-            </a>
-        </div>
-        <div class="col-lg-3 col-md-6 mb-4">
-            <a href="{% url 'produkty:wyciagnij_liste_modeli' %}" class="tool-card-link">
-                <div class="tool-card">
-                    <div class="card-body">
-                        <i class="fas fa-list-ol tool-icon"></i>
-                        <h5 class="card-title">Lista Modeli</h5>
+                </a>
+            </div>
+            <div class="col-lg-3 col-md-6 mb-4">
+                <a href="{% url 'produkty:lista_produktow' %}" class="tool-card-link">
+                    <div class="tool-card">
+                        <div class="card-body">
+                            <i class="fas fa-list tool-icon"></i>
+                            <h5 class="card-title">Lista Produktów</h5>
+                        </div>
                     </div>
-                </div>
-            </a>
-        </div>
-    </div>
-</div>
+                </a>
+            </div>
+            <div class="col-lg-3 col-md-6 mb-4">
+                <a href="{% url 'produkty:delete_sales_for_day' %}" class="tool-card-link">
+                    <div class="tool-card">
+                        <div class="card-body">
+                            <i class="fas fa-trash-alt tool-icon"></i>
+                            <h5 class="card-title">Usuń Sprzedaż z Dnia</h5>
+                        </div>
+                    </div>
+                </a>
+            </div>
+        </div></div>
 
 <style>
 .dashboard-container {

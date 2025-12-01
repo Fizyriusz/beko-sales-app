@@ -7,7 +7,7 @@ from zipfile import BadZipFile
 from decimal import Decimal, InvalidOperation
 import logging
 from django.utils import timezone
-from django.db.models import Sum
+from django.db.models import Sum, Count, F
 from collections import defaultdict
 from datetime import timedelta, datetime
 from rapidfuzz import fuzz, process 
@@ -15,9 +15,11 @@ import re
 from django.db import models
 from django.http import HttpResponse, JsonResponse
 from django.contrib.auth.decorators import login_required
+from django.contrib.admin.views.decorators import staff_member_required
 from openpyxl.styles import PatternFill, Font, Alignment, Border, Side
 from openpyxl.utils import get_column_letter
 from io import BytesIO
+import calendar
 
 @login_required
 def test_template(request):
@@ -29,27 +31,34 @@ def test_template(request):
 
 @login_required
 def home(request):
-    today = timezone.now().date()
+    today = datetime.now().date()
+    # Tydzień zaczyna się w poniedziałek (weekday() == 0)
     start_of_week = today - timedelta(days=today.weekday())
+    end_of_week = start_of_week + timedelta(days=6)
+    
     start_of_month = today.replace(day=1)
+    # Znajdź ostatni dzień miesiąca
+    end_of_month = (start_of_month + timedelta(days=32)).replace(day=1) - timedelta(days=1)
 
-    sprzedaz_tygodniowa = Sprzedaz.objects.filter(data_sprzedazy__gte=start_of_week).select_related('produkt')
-    sprzedaz_miesieczna = Sprzedaz.objects.filter(data_sprzedazy__gte=start_of_month).select_related('produkt')
+    sprzedaz_tygodniowa = Sprzedaz.objects.filter(data_sprzedazy__range=[start_of_week, end_of_week])
+    sprzedaz_miesieczna = Sprzedaz.objects.filter(data_sprzedazy__range=[start_of_month, end_of_month])
 
     # Obliczanie sum prowizji
-    tygodniowa_suma = sum(
-        sprzedaz.produkt.stawka * sprzedaz.liczba_sztuk 
-        for sprzedaz in sprzedaz_tygodniowa
-    )
-    miesieczna_suma = sum(
-        sprzedaz.produkt.stawka * sprzedaz.liczba_sztuk 
-        for sprzedaz in sprzedaz_miesieczna
-    )
+    tygodniowa_suma = sprzedaz_tygodniowa.aggregate(
+        total=Sum(F('liczba_sztuk') * F('produkt__stawka') + F('prowizja'), output_field=models.DecimalField())
+    )['total'] or Decimal('0.00')
+
+    miesieczna_suma = sprzedaz_miesieczna.aggregate(
+        total=Sum(F('liczba_sztuk') * F('produkt__stawka') + F('prowizja'), output_field=models.DecimalField())
+    )['total'] or Decimal('0.00')
+
 
     # Pobierz licznik klientów na dziś
     licznik, _ = KlientCounter.objects.get_or_create(data=today)
 
-    najczesciej_sprzedawane = Sprzedaz.objects.values('produkt__model').annotate(
+    najczesciej_sprzedawane = Sprzedaz.objects.filter(
+        data_sprzedazy__gte=start_of_month
+    ).values('produkt__model').annotate(
         liczba_sztuk=Sum('liczba_sztuk')
     ).order_by('-liczba_sztuk')[:5]
 
@@ -214,86 +223,71 @@ def sprzedaz_sukces(request):
 
 @login_required
 def podsumowanie_sprzedazy(request):
-    # Pobieranie wartości filtrów z GET
     data_od = request.GET.get('data_od')
     data_do = request.GET.get('data_do')
-    produkt = request.GET.get('produkt')
-    marka = request.GET.get('marka')
+    produkt_nazwa = request.GET.get('produkt')
+    marka_nazwa = request.GET.get('marka')
 
-    # Tworzenie podstawowego zapytania do modelu Sprzedaz
-    sprzedaz = Sprzedaz.objects.all()
-
-    # Filtracja na podstawie daty
-    if data_od:
-        sprzedaz = sprzedaz.filter(data_sprzedazy__gte=data_od)
-    if data_do:
-        sprzedaz = sprzedaz.filter(data_sprzedazy__lte=data_do)
-
-    # Parsowanie dat dla zadań
-    start_date = datetime.strptime(data_od, "%Y-%m-%d").date() if data_od else timezone.now().date()
-    end_date = datetime.strptime(data_do, "%Y-%m-%d").date() if data_do else timezone.now().date()
-
-    # Filtracja na podstawie produktu i marki
-    if produkt:
-        sprzedaz = sprzedaz.filter(produkt__model__icontains=produkt)
-    if marka:
-        sprzedaz = sprzedaz.filter(produkt__marka__icontains=marka)
-
-    # Grupowanie danych
-    sprzedaz_podsumowanie = {}
-
-    # Pobieranie aktywnych zadań
-    aktywne_zadania = Zadanie.objects.filter(data_start__lte=end_date, data_koniec__gte=start_date)
-
-    task_rewards = []
-
-    for zadanie in aktywne_zadania:
-        sprzedane = Sprzedaz.objects.filter(
-            produkt__in=zadanie.produkty.all(),
-            data_sprzedazy__range=[zadanie.data_start, zadanie.data_koniec]
-        ).aggregate(Sum('liczba_sztuk'))['liczba_sztuk__sum'] or 0
-
-        premia = 0
-        if zadanie.prog_1 and sprzedane >= zadanie.prog_1:
-            premia = zadanie.prog_1_premia
-        if zadanie.prog_2 and sprzedane >= zadanie.prog_2:
-            premia = zadanie.prog_2_premia
+    if not data_od and not data_do:
+        today = datetime.now().date()
+        start_of_month = today.replace(day=1)
+        end_of_month = (start_of_month + timedelta(days=32)).replace(day=1) - timedelta(days=1)
         
-        if premia > 0:
-            task_rewards.append({
-                'nazwa': zadanie.nazwa,
-                'sprzedane': sprzedane,
-                'premia': premia,
-            })
+        data_od = start_of_month.strftime('%Y-%m-%d')
+        data_do = end_of_month.strftime('%Y-%m-%d')
 
-    for item in sprzedaz:
-        model = item.produkt.model
-        marka = item.produkt.marka
-        stawka = item.produkt.stawka
+    # Nawigacja po miesiącach
+    current_month_start = datetime.strptime(data_od, '%Y-%m-%d').date()
+    
+    prev_month_end = current_month_start - timedelta(days=1)
+    prev_month_start = prev_month_end.replace(day=1)
 
-        klucz = f"{marka}_{model}"
+    next_month_start = (current_month_start + timedelta(days=32)).replace(day=1)
+    next_month_end = (next_month_start + timedelta(days=32)).replace(day=1) - timedelta(days=1)
 
-        if klucz not in sprzedaz_podsumowanie:
-            sprzedaz_podsumowanie[klucz] = {
-                'marka': marka,
-                'model': model,
-                'liczba_sztuk': 0,
-                'stawka': stawka,
-                'suma_prowizji': 0,
-            }
+    sprzedaz_qs = Sprzedaz.objects.select_related('produkt').all()
 
-        sprzedaz_podsumowanie[klucz]['liczba_sztuk'] += item.liczba_sztuk
-        sprzedaz_podsumowanie[klucz]['suma_prowizji'] += stawka * item.liczba_sztuk
+    if data_od:
+        sprzedaz_qs = sprzedaz_qs.filter(data_sprzedazy__gte=data_od)
+    if data_do:
+        sprzedaz_qs = sprzedaz_qs.filter(data_sprzedazy__lte=data_do)
+    if produkt_nazwa:
+        sprzedaz_qs = sprzedaz_qs.filter(produkt__model__icontains=produkt_nazwa)
+    if marka_nazwa:
+        sprzedaz_qs = sprzedaz_qs.filter(produkt__marka__icontains=marka_nazwa)
 
-    # Obliczanie sumarycznych wartości dla wszystkich sprzedaży
-    liczba_sztuk = sum(item['liczba_sztuk'] for item in sprzedaz_podsumowanie.values())
-    calkowita_prowizja = sum(item['suma_prowizji'] for item in sprzedaz_podsumowanie.values())
+    # Annotate with the commission for each sale
+    sprzedaz_annotated = sprzedaz_qs.annotate(
+        obliczona_prowizja=models.F('liczba_sztuk') * models.F('produkt__stawka')
+    )
+
+    sprzedaz_podsumowanie = (
+        sprzedaz_annotated
+        .values('produkt__marka', 'produkt__model', 'produkt__stawka')
+        .annotate(
+            liczba_sztuk=Sum('liczba_sztuk'),
+            suma_prowizji=Sum('obliczona_prowizja')
+        )
+        .order_by('-suma_prowizji')
+    )
+
+    agregaty = sprzedaz_annotated.aggregate(
+        calkowita_liczba_sztuk=Sum('liczba_sztuk'),
+        calkowita_prowizja=Sum('obliczona_prowizja')
+    )
 
     context = {
         'sprzedaz': sprzedaz_podsumowanie,
-        'liczba_sztuk': liczba_sztuk,
-        'calkowita_prowizja': calkowita_prowizja,
-        'task_rewards': task_rewards,
+        'liczba_sztuk': agregaty['calkowita_liczba_sztuk'] or 0,
+        'calkowita_prowizja': agregaty['calkowita_prowizja'] or 0,
+        'data_od': data_od,
+        'data_do': data_do,
+        'produkt': produkt_nazwa,
+        'marka': marka_nazwa,
+        'prev_month_data_od': prev_month_start.strftime('%Y-%m-%d'),
+        'prev_month_data_do': prev_month_end.strftime('%Y-%m-%d'),
+        'next_month_data_od': next_month_start.strftime('%Y-%m-%d'),
+        'next_month_data_do': next_month_end.strftime('%Y-%m-%d'),
     }
 
     return render(request, 'produkty/podsumowanie_sprzedazy.html', context)
@@ -571,12 +565,6 @@ def zadania_management(request):
     return render(request, 'produkty/zadania_management.html', {'zadania': zadania})
 
 @login_required
-def zadania_management(request):
-    """Widok do zarządzania zadaniami"""
-    zadania = Zadanie.objects.all().order_by('-data_start')
-    return render(request, 'produkty/zadania_management.html', {'zadania': zadania})
-
-@login_required
 def zadanie_dodaj(request):
     """Widok do dodawania nowego zadania"""
     if request.method == 'POST':
@@ -657,3 +645,177 @@ def szczegoly_zadania(request, zadanie_id):
     }
 
     return render(request, 'produkty/szczegoly_zadania.html', context)
+
+@login_required
+def calendar_view(request, year=None, month=None):
+    today = datetime.now().date()
+    if year is None or month is None:
+        year = today.year
+        month = today.month
+
+    # Pobieranie sprzedaży dla danego miesiąca i obliczanie prowizji
+    sales_in_month = Sprzedaz.objects.filter(
+        data_sprzedazy__year=year,
+        data_sprzedazy__month=month
+    ).annotate(
+        commission=models.F('liczba_sztuk') * models.F('produkt__stawka') + models.F('prowizja')
+    ).values('data_sprzedazy').annotate(
+        total_items=Sum('liczba_sztuk'),
+        total_commission=Sum('commission')
+    ).order_by('data_sprzedazy')
+
+    sales_by_day = {
+        sale['data_sprzedazy'].day: {
+            'total_items': sale['total_items'],
+            'total_commission': sale['total_commission']
+        } for sale in sales_in_month
+    }
+
+    # Ustawienia kalendarza
+    cal = calendar.Calendar()
+    month_days = cal.monthdayscalendar(year, month)
+
+    # Poprzedni i następny miesiąc
+    first_day_of_month = datetime(year, month, 1)
+    prev_month_date = first_day_of_month - timedelta(days=1)
+    next_month_date = (first_day_of_month + timedelta(days=32)).replace(day=1)
+
+    context = {
+        'year': year,
+        'month': month,
+        'month_name': calendar.month_name[month],
+        'month_days': month_days,
+        'sales_by_day': sales_by_day,
+        'today': today,
+        'prev_year': prev_month_date.year,
+        'prev_month': prev_month_date.month,
+        'next_year': next_month_date.year,
+        'next_month': next_month_date.month,
+    }
+    return render(request, 'produkty/calendar.html', context)
+
+
+
+@login_required
+
+def daily_sales_view(request, year, month, day):
+    date_of_sales = datetime(year, month, day).date()
+    sales = Sprzedaz.objects.filter(data_sprzedazy=date_of_sales).select_related('produkt').annotate(
+        total_commission=models.F('liczba_sztuk') * models.F('produkt__stawka') + models.F('prowizja')
+    )
+
+    totals = sales.aggregate(
+        total_items_sum=Sum('liczba_sztuk'),
+        total_commission_sum=Sum('total_commission')
+    )
+
+    context = {
+        'date_of_sales': date_of_sales,
+        'sales': sales,
+        'total_items': totals['total_items_sum'],
+        'total_commission': totals['total_commission_sum'],
+    }
+    return render(request, 'produkty/daily_sales.html', context)
+
+
+
+@staff_member_required
+
+def delete_sales_for_day(request):
+
+    message = ''
+
+    if request.method == 'POST':
+
+        date_str = request.POST.get('date')
+
+        if date_str:
+
+            try:
+
+                date_to_delete = datetime.strptime(date_str, '%Y-%m-%d').date()
+
+                sales_to_delete = Sprzedaz.objects.filter(data_sprzedazy=date_to_delete)
+
+                count = sales_to_delete.count()
+
+                sales_to_delete.delete()
+
+                message = f'Pomyślnie usunięto {count} rekordów sprzedaży z dnia {date_to_delete}.'
+
+            except ValueError:
+
+                message = 'Nieprawidłowy format daty. Użyj formatu YYYY-MM-DD.'
+
+        else:
+
+            message = 'Proszę wybrać datę.'
+
+
+
+    return render(request, 'produkty/delete_sales_for_day.html', {'message': message})
+
+@login_required
+def lista_produktow(request):
+    produkty = Produkt.objects.all()
+
+    # Filtering
+    model_filter = request.GET.get('model', '')
+    marka_filter = request.GET.get('marka', '')
+    grupa_towarowa_filter = request.GET.get('grupa_towarowa', '')
+    prowizja_od = request.GET.get('prowizja_od', '')
+    prowizja_do = request.GET.get('prowizja_do', '')
+
+    if model_filter:
+        produkty = produkty.filter(model__icontains=model_filter)
+    if marka_filter:
+        produkty = produkty.filter(marka__icontains=marka_filter)
+    if grupa_towarowa_filter:
+        produkty = produkty.filter(grupa_towarowa__icontains=grupa_towarowa_filter)
+    if prowizja_od:
+        try:
+            produkty = produkty.filter(stawka__gte=Decimal(prowizja_od))
+        except (InvalidOperation, ValueError):
+            pass  # Ignore invalid decimal values
+    if prowizja_do:
+        try:
+            produkty = produkty.filter(stawka__lte=Decimal(prowizja_do))
+        except (InvalidOperation, ValueError):
+            pass  # Ignore invalid decimal values
+
+    # Grouping
+    group_by = request.GET.get('group', None)
+    grouped_produkty = None
+
+    if group_by in ['marka', 'grupa_towarowa']:
+        grouped_produkty = defaultdict(list)
+        for produkt in produkty.order_by(group_by):
+            grouped_produkty[getattr(produkt, group_by)].append(produkt)
+        # Sort the groups by key, handling None values
+        grouped_produkty = dict(sorted(grouped_produkty.items(), key=lambda item: (item[0] is None, item[0])))
+
+    # Sorting
+    sort_by = request.GET.get('sort', 'model')
+    if sort_by not in ['model', 'marka', 'stawka', 'grupa_towarowa']:
+        sort_by = 'model'
+    
+    direction = request.GET.get('dir', 'asc')
+    if direction == 'desc':
+        sort_by = f'-{sort_by}'
+    
+    if not grouped_produkty:
+        produkty = produkty.order_by(sort_by)
+
+    context = {
+        'produkty': produkty,
+        'grouped_produkty': grouped_produkty,
+        'group_by': group_by,
+        'model_filter': model_filter,
+        'marka_filter': marka_filter,
+        'grupa_towarowa_filter': grupa_towarowa_filter,
+        'prowizja_od': prowizja_od,
+        'prowizja_do': prowizja_do,
+        'sort': request.GET.get('sort', 'model'),
+        'dir': request.GET.get('dir', 'asc'),
+    }
+    return render(request, 'produkty/lista_produktow.html', context)

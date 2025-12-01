@@ -1,0 +1,66 @@
+{% extends 'produkty/base.html' %}
+{% load produkty_tags %}
+
+{% block title %}Kalendarz Sprzedaży{% endblock %}
+
+{% block content %}
+<div class="container mt-4">
+    <div class="calendar-header">
+        <div class="calendar-nav">
+            <a href="{% url 'produkty:calendar' prev_year prev_month %}">&laquo; Poprzedni</a>
+        </div>
+        <h2>{{ month_name }} {{ year }}</h2>
+        <div class="calendar-nav">
+            <a href="{% url 'produkty:calendar' next_year next_month %}">Następny &raquo;</a>
+        </div>
+    </div>
+
+    <table class="calendar">
+        <thead>
+            <tr>
+                <th>Poniedziałek</th>
+                <th>Wtorek</th>
+                <th>Środa</th>
+                <th>Czwartek</th>
+                <th>Piątek</th>
+                <th>Sobota</th>
+                <th>Niedziela</th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for week in month_days %}
+            <tr>
+                {% for day in week %}
+                <td class="{% if day == 0 %}empty-day{% elif year == today.year and month == today.month and day == today.day %}today{% endif %}">
+                    {% if day != 0 %}
+                        {% with sales_data=sales_by_day|get_item:day %}
+                            <a href="{% url 'produkty:daily_sales' year month day %}" class="day-link">
+                                <div class="day-number">{{ day }}</div>
+                                {% if sales_data %}
+                                <div class="sales-count">
+                                    <strong>Sztuk: {{ sales_data.total_items }}</strong><br>
+                                    <strong>Prowizja: {{ sales_data.total_commission|floatformat:2 }} zł</strong>
+                                </div>
+                                {% endif %}
+                            </a>
+                        {% endwith %}
+                    {% endif %}
+                </td>
+                {% endfor %}
+            </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+// Prosty 'get_item' dla szablonów Django, jeśli nie ma niestandardowego tagu filtra
+const sales_by_day = {{ sales_by_day|safe }};
+document.addEventListener('DOMContentLoaded', function() {
+    // Ta funkcja nie jest już potrzebna, jeśli używasz niestandardowego filtra szablonu,
+    // ale zostawiam jako przykład, jak można by to zrobić w JS
+});
+</script>
+{% endblock %}

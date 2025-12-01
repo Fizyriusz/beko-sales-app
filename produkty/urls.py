@@ -4,6 +4,7 @@ from . import views
 app_name = 'produkty'  # Dodaj to, aby ustawić namespace dla aplikacji
 
 urlpatterns = [
+    path('produkty/', views.lista_produktow, name='lista_produktow'),
     path('', views.home, name='home'),
     path('import/', views.import_excel, name='import_excel'),
     path('test/', views.test_template, name='test_template'),
@@ -12,6 +13,11 @@ urlpatterns = [
     path('podsumowanie/', views.podsumowanie_sprzedazy, name='podsumowanie_sprzedazy'),
     path('podsumowanie/reset/', views.reset_sprzedaz, name='reset_sprzedaz'),
     path('wyciagnij_liste_modeli/', views.wyciagnij_liste_modeli, name='wyciagnij_liste_modeli'),  # Nowy widok wyciągania listy modeli
+
+    # Kalendarz
+    path('calendar/', views.calendar_view, name='calendar'),
+    path('calendar/<int:year>/<int:month>/', views.calendar_view, name='calendar'),
+    path('calendar/<int:year>/<int:month>/<int:day>/', views.daily_sales_view, name='daily_sales'),
 
     # Zadania
     path('zadania/', views.zadania_management, name='lista_zadan'),
@@ -26,4 +32,5 @@ urlpatterns = [
     path('klienci/', views.klienci, name='klienci'),
     path('klienci/zmien/<str:operacja>/', views.zmien_licznik, name='zmien_licznik'),
     path('import/delete-all/', views.delete_all_models, name='delete_all_models'),
+    path('admin/delete-sales/', views.delete_sales_for_day, name='delete_sales_for_day'),
 ]

@@ -1,0 +1,29 @@
+{% extends 'produkty/base.html' %}
+
+{% block title %}Usuń Sprzedaż z Dnia{% endblock %}
+
+{% block content %}
+<div class="container mt-4">
+    <h2>Usuń sprzedaż z wybranego dnia</h2>
+    <p class="text-muted">Ta operacja jest nieodwracalna. Używaj z rozwagą.</p>
+
+    {% if message %}
+        <div class="alert {% if 'Pomyślnie' in message %}alert-success{% else %}alert-danger{% endif %}" role="alert">
+            {{ message }}
+        </div>
+    {% endif %}
+
+    <div class="card">
+        <div class="card-body">
+            <form method="post">
+                {% csrf_token %}
+                <div class="form-group">
+                    <label for="date">Wybierz datę:</label>
+                    <input type="date" id="date" name="date" class="form-control" required>
+                </div>
+                <button type="submit" class="btn btn-danger mt-3" onclick="return confirm('Czy na pewno chcesz usunąć WSZYSTKIE rekordy sprzedaży z tego dnia?');">Usuń Sprzedaż</button>
+            </form>
+        </div>
+    </div>
+</div>
+{% endblock %}

@@ -5,6 +5,37 @@
 {% block content %}
 <h1>Podsumowanie Sprzedaży</h1>
 
+<div class="filter-container">
+    <h3>Filtruj sprzedaż:</h3>
+    <div class="month-navigation">
+        <a href="?data_od={{ prev_month_data_od }}&data_do={{ prev_month_data_do }}" class="btn-month-nav">&laquo; Poprzedni</a>
+        <span class="current-month">{{ data_od|date:"F Y" }}</span>
+        <a href="?data_od={{ next_month_data_od }}&data_do={{ next_month_data_do }}" class="btn-month-nav">Następny &raquo;</a>
+    </div>
+
+    <form method="get" action="" class="filter-form">
+        <div class="form-group">
+            <label for="data_od">Data od:</label>
+            <input type="date" name="data_od" id="data_od" value="{{ data_od }}">
+        </div>
+        <div class="form-group">
+            <label for="data_do">Data do:</label>
+            <input type="date" name="data_do" id="data_do" value="{{ data_do }}">
+        </div>
+        <div class="form-group">
+            <label for="produkt">Produkt:</label>
+            <input type="text" name="produkt" id="produkt" placeholder="Wpisz nazwę produktu" value="{{ produkt }}">
+        </div>
+        <div class="form-group">
+            <label for="marka">Marka:</label>
+            <input type="text" name="marka" id="marka" placeholder="Wpisz nazwę marki" value="{{ marka }}">
+        </div>
+        <div class="form-group">
+            <button type="submit">Filtruj</button>
+        </div>
+    </form>
+</div>
+
 <div style="margin-bottom: 20px;">
     <form method="post" action="{% url 'produkty:reset_sprzedaz' %}" style="display: inline;" onsubmit="return confirm('Czy na pewno chcesz zresetować wszystkie dane sprzedaży?');">
         {% csrf_token %}
@@ -29,13 +60,13 @@
         </tr>
     </thead>
     <tbody>
-        {% for klucz, dane in sprzedaz.items %}
+        {% for s in sprzedaz %}
         <tr>
-            <td>{{ dane.marka }}</td>
-            <td>{{ dane.model }}</td>
-            <td>{{ dane.liczba_sztuk }}</td>
-            <td>{{ dane.stawka }} PLN</td>
-            <td>{{ dane.suma_prowizji }} PLN</td>
+            <td>{{ s.produkt__marka }}</td>
+            <td>{{ s.produkt__model }}</td>
+            <td>{{ s.liczba_sztuk }}</td>
+            <td>{{ s.produkt__stawka }} PLN</td>
+            <td>{{ s.suma_prowizji }} PLN</td>
         </tr>
         {% endfor %}
     </tbody>
@@ -62,21 +93,4 @@
     </tbody>
 </table>
 {% endif %}
-
-<h3>Filtruj sprzedaż:</h3>
-<form method="get" action="">
-    <label for="data_od">Data od:</label>
-    <input type="date" name="data_od" id="data_od">
-
-    <label for="data_do">Data do:</label>
-    <input type="date" name="data_do" id="data_do">
-
-    <label for="produkt">Produkt:</label>
-    <input type="text" name="produkt" id="produkt" placeholder="Wpisz nazwę produktu">
-
-    <label for="marka">Marka:</label>
-    <input type="text" name="marka" id="marka" placeholder="Wpisz nazwę marki">
-
-    <button type="submit">Filtruj</button>
-</form>
 {% endblock %}

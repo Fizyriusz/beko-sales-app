@@ -1,0 +1,65 @@
+{% extends 'produkty/base.html' %}
+
+{% block title %}Szczegóły Sprzedaży - {{ date_of_sales|date:"d.m.Y" }}{% endblock %}
+
+{% block content %}
+<div class="container mt-4">
+    <h2>Szczegóły sprzedaży z dnia: <strong>{{ date_of_sales|date:"d.m.Y" }}</strong></h2>
+    <a href="{% url 'produkty:calendar' date_of_sales.year date_of_sales.month %}" class="btn btn-secondary mb-3">Powrót do kalendarza</a>
+
+    {% if sales %}
+        <table class="table table-striped table-bordered">
+            <thead class="thead-dark">
+                <tr>
+                    <th>Model Produktu</th>
+                    <th>Marka</th>
+                    <th>Liczba Sztuk</th>
+                    <th>Prowizja</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for sale in sales %}
+                <tr>
+                    <td>{{ sale.produkt.model }}</td>
+                    <td>{{ sale.produkt.marka }}</td>
+                    <td>{{ sale.liczba_sztuk }}</td>
+                    <td>{{ sale.total_commission|floatformat:2 }} zł</td>
+                </tr>
+                {% endfor %}
+            </tbody>
+            <tfoot>
+                <tr class="table-info">
+                    <td colspan="2"><strong>Podsumowanie dnia</strong></td>
+                    <td><strong>{{ total_items|default:0 }} szt.</strong></td>
+                    <td><strong>{{ total_commission|default:0|floatformat:2 }} zł</strong></td>
+                </tr>
+            </tfoot>
+        </table>
+    {% else %}
+        <div class="alert alert-info mt-3" role="alert">
+            Brak zarejestrowanej sprzedaży w tym dniu.
+        </div>
+    {% endif %}
+</div>
+
+{% endblock %}
+
+{% block extra_js %}
+<script>
+// Custom template tags implemented in JS for demonstration if not using Django's templatetags
+// This is not standard practice, but shows how one might achieve this on the client-side.
+// For this to work, you would need to pass the entire sales list as a JSON object.
+// In this case, we'll rely on Django's template tags as it's the correct approach.
+
+// Helper function if we were to calculate totals in JS
+function calculateTotals(sales) {
+    let totalItems = 0;
+    let totalCommission = 0;
+    sales.forEach(sale => {
+        totalItems += sale.liczba_sztuk;
+        totalCommission += parseFloat(sale.total_commission);
+    });
+    return { totalItems, totalCommission };
+}
+</script>
+{% endblock %}

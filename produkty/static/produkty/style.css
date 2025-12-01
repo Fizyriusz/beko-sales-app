@@ -301,3 +301,155 @@ body {
         margin-bottom: 20px;
     }
 }
+
+/* Calendar Styles */
+.calendar {
+    width: 100%;
+    border-collapse: collapse;
+}
+.calendar th, .calendar td {
+    border: 1px solid #ddd;
+    padding: 8px;
+    text-align: center;
+    vertical-align: top;
+    height: 100px;
+}
+.calendar th {
+    background-color: #f2f2f2;
+    height: auto;
+}
+.calendar-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 20px;
+}
+.calendar-nav a {
+    text-decoration: none;
+    padding: 5px 15px;
+    background-color: #007bff;
+    color: white;
+    border-radius: 5px;
+}
+.day-number {
+    font-weight: bold;
+    font-size: 1.2em;
+    text-align: left;
+    padding: 5px;
+}
+.day-link {
+    color: #007bff;
+    text-decoration: none;
+    display: block;
+    height: 100%;
+}
+.day-link:hover {
+    background-color: #f0f8ff;
+}
+.sales-count {
+    margin-top: 10px;
+    font-size: 1em;
+    color: #28a745;
+    font-weight: bold;
+}
+.empty-day {
+    background-color: #f9f9f9;
+}
+.today {
+    background-color: #fffbdd;
+}
+
+/* Filter Styles */
+.filter-container {
+    background-color: #ffffff;
+    padding: 20px;
+    border-radius: 8px;
+    box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+    margin-bottom: 20px;
+}
+
+.filter-container h3 {
+    margin-top: 0;
+    margin-bottom: 15px;
+    text-align: center;
+    color: #34495e;
+}
+
+.month-navigation {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 20px;
+}
+
+.btn-month-nav {
+    background-color: #3498db;
+    color: white;
+    padding: 8px 15px;
+    border-radius: 5px;
+    text-decoration: none;
+    font-weight: 500;
+    transition: background-color 0.3s;
+}
+
+.btn-month-nav:hover {
+    background-color: #2980b9;
+}
+
+.current-month {
+    font-size: 1.2em;
+    font-weight: bold;
+    color: #2c3e50;
+}
+
+.filter-form {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 15px;
+    align-items: flex-end;
+}
+
+.form-group {
+    display: flex;
+    flex-direction: column;
+    flex: 1 1 180px; /* Flex-grow, flex-shrink, flex-basis */
+}
+
+.form-group label {
+    margin-bottom: 5px;
+    font-weight: 500;
+    color: #555;
+    font-size: 14px;
+}
+
+.filter-form input[type="date"],
+.filter-form input[type="text"] {
+    padding: 10px;
+    border: 1px solid #ccc;
+    border-radius: 5px;
+    font-size: 14px;
+    transition: border-color 0.3s;
+}
+
+.filter-form input[type="date"]:focus,
+.filter-form input[type="text"]:focus {
+    outline: none;
+    border-color: #3498db;
+}
+
+.filter-form button {
+    padding: 10px 20px;
+    background-color: #1abc9c;
+    color: white;
+    border: none;
+    border-radius: 5px;
+    cursor: pointer;
+    font-size: 16px;
+    font-weight: bold;
+    transition: background-color 0.3s;
+    height: 40px; /* Align with inputs */
+}
+
+.filter-form button:hover {
+    background-color: #16a085;
+}
