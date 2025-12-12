@@ -33,9 +33,9 @@ Podsumowanie Ekspozycji
         <h3>Total w grupie: <span id="total">0</span></h3>
         <div class="buttons-container">
             {% if poprzednia_grupa %}
-            <a href="{% url 'produkty:ekspozycja_form' grupa_id=poprzednia_grupa.id %}" class="btn-back">Powrót</a>
+            <a href="{% url 'produkty:ekspozycja_form' grupa_id=poprzednia_grupa.id %}" class="btn btn-secondary">Powrót</a>
             {% endif %}
-            <a href="#" onclick="this.closest('form').submit();" class="btn-save">Zapisz</a>
+            <button type="submit" class="btn btn-primary">Zapisz</button>
         </div>
         
         

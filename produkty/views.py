@@ -1,6 +1,6 @@
 from django.shortcuts import render, redirect, get_object_or_404
 from .models import Produkt, Sprzedaz, Zadanie, Ekspozycja, GrupaProduktowa, Marka, KlientCounter
-from .forms import ZadanieForm
+from .forms import ZadanieForm, ProduktForm
 import openpyxl
 from openpyxl.utils.exceptions import InvalidFileException
 from zipfile import BadZipFile
@@ -561,8 +561,32 @@ def delete_all_models(request):
 @login_required
 def zadania_management(request):
     """Widok do zarządzania zadaniami"""
-    zadania = Zadanie.objects.all().order_by('-data_start')
-    return render(request, 'produkty/zadania_management.html', {'zadania': zadania})
+    today = datetime.now().date()
+    return redirect('produkty:zadania_view', year=today.year, month=today.month)
+
+@login_required
+def zadania_view(request, year, month):
+    """Widok do wyświetlania zadań w ujęciu miesięcznym"""
+    zadania = Zadanie.objects.filter(
+        data_start__year=year, data_start__month=month
+    ).order_by('-data_start')
+
+    first_day_of_month = datetime(year, month, 1)
+    prev_month_date = first_day_of_month - timedelta(days=1)
+    next_month_date = (first_day_of_month + timedelta(days=32)).replace(day=1)
+
+    context = {
+        'zadania': zadania,
+        'year': year,
+        'month': month,
+        'month_name': calendar.month_name[month],
+        'prev_year': prev_month_date.year,
+        'prev_month': prev_month_date.month,
+        'next_year': next_month_date.year,
+        'next_month': next_month_date.month,
+    }
+    return render(request, 'produkty/zadania.html', context)
+
 
 @login_required
 def zadanie_dodaj(request):
@@ -571,7 +595,7 @@ def zadanie_dodaj(request):
         form = ZadanieForm(request.POST)
         if form.is_valid():
             form.save()
-            return redirect('produkty:lista_zadan')
+            return redirect('produkty:zadania_management')
     else:
         form = ZadanieForm()
     
@@ -589,7 +613,7 @@ def zadanie_edytuj(request, zadanie_id):
         form = ZadanieForm(request.POST, instance=zadanie)
         if form.is_valid():
             form.save()
-            return redirect('produkty:lista_zadan')
+            return redirect('produkty:zadania_management')
     else:
         form = ZadanieForm(instance=zadanie)
 
@@ -608,7 +632,7 @@ def zadanie_usun(request, zadanie_id):
     
     if request.method == 'POST':
         zadanie.delete()
-        return redirect('produkty:lista_zadan')
+        return redirect('produkty:zadania_management')
     
     return render(request, 'produkty/zadanie_usun.html', {'zadanie': zadanie})
 
@@ -819,3 +843,16 @@ def lista_produktow(request):
         'dir': request.GET.get('dir', 'asc'),
     }
     return render(request, 'produkty/lista_produktow.html', context)
+
+@login_required
+def product_edit(request, product_id):
+    produkt = get_object_or_404(Produkt, pk=product_id)
+    if request.method == 'POST':
+        form = ProduktForm(request.POST, instance=produkt)
+        if form.is_valid():
+            form.save()
+            return redirect('produkty:lista_produktow')
+    else:
+        form = ProduktForm(instance=produkt)
+    return render(request, 'produkty/product_edit.html', {'form': form})
+

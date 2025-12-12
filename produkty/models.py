@@ -1,5 +1,6 @@
 from django.db import models
 from django.contrib.auth.models import User
+from datetime import date
 
 
 class Produkt(models.Model):
@@ -41,7 +42,7 @@ class Zadanie(models.Model):
 class Sprzedaz(models.Model):
     produkt = models.ForeignKey(Produkt, on_delete=models.CASCADE)
     liczba_sztuk = models.IntegerField()
-    data_sprzedazy = models.DateField(auto_now_add=True)
+    data_sprzedazy = models.DateField(default=date.today)
     zadanie = models.ForeignKey(Zadanie, on_delete=models.SET_NULL, null=True, blank=True)
     prowizja = models.DecimalField(max_digits=10, decimal_places=2, default=0)
 
@@ -69,7 +70,7 @@ class Ekspozycja(models.Model):
         return f"{self.grupa.nazwa} - {self.marka.nazwa}: {self.liczba}"
 
 class KlientCounter(models.Model):
-    data = models.DateField(auto_now_add=True)
+    data = models.DateField(default=date.today)
     liczba_klientow = models.IntegerField(default=0)
     notatka = models.TextField(blank=True, null=True)
 

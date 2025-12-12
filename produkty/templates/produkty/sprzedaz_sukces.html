@@ -5,5 +5,8 @@
 {% block content %}
     <h1>Sukces!</h1>
     <p>Sprzedaż produktu została pomyślnie dodana do bazy danych.</p>
-    <a href="{% url 'produkty:sprzedaz' %}">Powrót do strony sprzedaży</a>
+    <div class="action-buttons">
+        <a href="{% url 'produkty:sprzedaz' %}" class="btn btn-secondary">Powrót do strony sprzedaży</a>
+        <a href="{% url 'produkty:home' %}" class="btn btn-primary">Powrót na stronę główną</a>
+    </div>
 {% endblock %}

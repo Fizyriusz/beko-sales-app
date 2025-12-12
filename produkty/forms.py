@@ -1,5 +1,5 @@
 from django import forms
-from .models import Zadanie
+from .models import Zadanie, Produkt
 
 class ZadanieForm(forms.ModelForm):
     class Meta:
@@ -27,3 +27,16 @@ class ZadanieForm(forms.ModelForm):
             raise forms.ValidationError("Data zakończenia nie może być wcześniejsza niż data rozpoczęcia.")
 
         return cleaned_data
+
+
+class ProduktForm(forms.ModelForm):
+    class Meta:
+        model = Produkt
+        fields = ['model', 'marka', 'grupa_towarowa', 'stawka']
+        widgets = {
+            'model': forms.TextInput(attrs={'class': 'form-control'}),
+            'marka': forms.TextInput(attrs={'class': 'form-control'}),
+            'grupa_towarowa': forms.TextInput(attrs={'class': 'form-control'}),
+            'stawka': forms.NumberInput(attrs={'class': 'form-control'}),
+        }
+

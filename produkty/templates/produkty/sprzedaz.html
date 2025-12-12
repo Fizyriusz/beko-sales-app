@@ -3,17 +3,22 @@
 {% block title %}Rejestracja Sprzedaży{% endblock %}
 
 {% block content %}
+<div class="form-container">
     <h1>Rejestracja Sprzedaży</h1>
     <form method="post">
         {% csrf_token %}
-        <label for="data_sprzedazy">Data Sprzedaży:</label>
-        <input type="date" id="data_sprzedazy" name="data_sprzedazy" required><br><br>
-
-        <label for="modele_sprzedazy">Modele sprzedane (każdy model w nowej linii):</label><br>
-        <textarea id="modele_sprzedazy" name="modele_sprzedazy" rows="10" cols="50" required></textarea><br><br>
-
-        <button type="submit">Zapisz Sprzedaż</button>
+        <div class="form-group">
+            <label for="data_sprzedazy">Data Sprzedaży:</label>
+            <input type="date" id="data_sprzedazy" name="data_sprzedazy" required>
+        </div>
+        <div class="form-group">
+            <label for="modele_sprzedazy">Modele sprzedane (każdy model w nowej linii):</label>
+            <textarea id="modele_sprzedazy" name="modele_sprzedazy" rows="10" cols="50" required></textarea>
+        </div>
+        <button type="submit" class="btn btn-primary">Zapisz Sprzedaż</button>
     </form>
-
-    <a href="{% url 'produkty:home' %}">Wróć do strony głównej</a>
+</div>
+<div class="action-buttons" style="margin-top: 20px;">
+    <a href="{% url 'produkty:home' %}" class="btn btn-secondary">Wróć do strony głównej</a>
+</div>
 {% endblock %}

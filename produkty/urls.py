@@ -5,6 +5,7 @@ app_name = 'produkty'  # Dodaj to, aby ustawić namespace dla aplikacji
 
 urlpatterns = [
     path('produkty/', views.lista_produktow, name='lista_produktow'),
+    path('produkty/edit/<int:product_id>/', views.product_edit, name='product_edit'),
     path('', views.home, name='home'),
     path('import/', views.import_excel, name='import_excel'),
     path('test/', views.test_template, name='test_template'),
@@ -20,7 +21,8 @@ urlpatterns = [
     path('calendar/<int:year>/<int:month>/<int:day>/', views.daily_sales_view, name='daily_sales'),
 
     # Zadania
-    path('zadania/', views.zadania_management, name='lista_zadan'),
+    path('zadania/', views.zadania_management, name='zadania_management'),
+    path('zadania/<int:year>/<int:month>/', views.zadania_view, name='zadania_view'),
     path('zadania/nowe/', views.zadanie_dodaj, name='nowe_zadanie'),
     path('zadania/edytuj/<int:zadanie_id>/', views.zadanie_edytuj, name='edytuj_zadanie'),
     path('zadania/usun/<int:zadanie_id>/', views.zadanie_usun, name='usun_zadanie'),
