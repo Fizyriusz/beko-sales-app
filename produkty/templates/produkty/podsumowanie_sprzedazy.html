@@ -49,6 +49,8 @@
 <p><strong>Całkowita prowizja:</strong> {{ calkowita_prowizja }} PLN</p>
 
 <h2>Sprzedane produkty:</h2>
+{% if grupa_beko %}
+<h3>Grupa Beko</h3>
 <table>
     <thead>
         <tr>
@@ -60,7 +62,7 @@
         </tr>
     </thead>
     <tbody>
-        {% for s in sprzedaz %}
+        {% for s in grupa_beko %}
         <tr>
             <td>{{ s.produkt__marka }}</td>
             <td>{{ s.produkt__model }}</td>
@@ -71,7 +73,59 @@
         {% endfor %}
     </tbody>
 </table>
+{% endif %}
 
+{% if grupa_whirlpool %}
+<h3>Grupa Whirlpool</h3>
+<table>
+    <thead>
+        <tr>
+            <th>Marka</th>
+            <th>Model</th>
+            <th>Liczba sztuk</th>
+            <th>Stawka (z mnożnikiem)</th>
+            <th>Suma prowizji</th>
+        </tr>
+    </thead>
+    <tbody>
+        {% for s in grupa_whirlpool %}
+        <tr>
+            <td>{{ s.produkt__marka }}</td>
+            <td>{{ s.produkt__model }}</td>
+            <td>{{ s.liczba_sztuk }}</td>
+            <td>{{ s.produkt__stawka }} PLN</td>
+            <td>{{ s.suma_prowizji }} PLN</td>
+        </tr>
+        {% endfor %}
+    </tbody>
+</table>
+{% endif %}
+
+{% if grupa_inne %}
+<h3>Inne</h3>
+<table>
+    <thead>
+        <tr>
+            <th>Marka</th>
+            <th>Model</th>
+            <th>Liczba sztuk</th>
+            <th>Stawka (z mnożnikiem)</th>
+            <th>Suma prowizji</th>
+        </tr>
+    </thead>
+    <tbody>
+        {% for s in grupa_inne %}
+        <tr>
+            <td>{{ s.produkt__marka }}</td>
+            <td>{{ s.produkt__model }}</td>
+            <td>{{ s.liczba_sztuk }}</td>
+            <td>{{ s.produkt__stawka }} PLN</td>
+            <td>{{ s.suma_prowizji }} PLN</td>
+        </tr>
+        {% endfor %}
+    </tbody>
+</table>
+{% endif %}
 {% if task_rewards %}
 <h2>Rozliczenia zadań</h2>
 <table>

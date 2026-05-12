@@ -23,6 +23,25 @@
                     </li>
                 {% endfor %}
             </ul>
+            
+            {% if nieznane_modele %}
+                <h3 class="mt-4">Nowe modele</h3>
+                <p>Poniższe modele nie zostały znalezione w bazie ani nie dopasowano do nich żadnych sugestii. Możesz przypisać je do konkretnej marki, zanim zostaną dodane do bazy:</p>
+                <ul>
+                    {% for model in nieznane_modele %}
+                        <li>
+                            Model: <strong>{{ model }}</strong>
+                            <input type="hidden" name="nowy_model_{{ forloop.counter }}" value="{{ model }}">
+                            <select name="marka_dla_{{ forloop.counter }}" class="form-control" style="display:inline-block; width:auto;">
+                                <option value="">--- Wybierz markę (opcjonalnie) ---</option>
+                                {% for marka in marki %}
+                                    <option value="{{ marka.id }}">{{ marka.nazwa }}</option>
+                                {% endfor %}
+                            </select>
+                        </li>
+                    {% endfor %}
+                </ul>
+            {% endif %}
         {% endwith %}
         <button type="submit">Zatwierdź sprzedaż</button>
     </form>

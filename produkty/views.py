@@ -91,41 +91,59 @@ def import_excel(request):
                 'error': 'Wystąpił błąd podczas przetwarzania pliku.'
             })
 
+        existing_products = {p.model: p for p in Produkt.objects.all()}
+        products_to_create = []
+        products_to_update = []
+        models_seen = set()
+
         for idx, row in enumerate(sheet.iter_rows(min_row=2, values_only=True), start=2):
-            # Nowy format: A-grupa_towarowa, B-marka (BRAND), C-model, D-stawka
             if len(row) < 4:
                 logger.warning(f"Wiersz {idx} pominięty - niewystarczająca liczba kolumn.")
                 continue
 
             grupa_towarowa, marka, model, stawka = row[0], row[1], row[2], row[3]
 
-            # Pomijamy wiersze, w których brakuje kluczowych danych
             if not model:
                 logger.warning(f"Wiersz {idx} pominięty - brak modelu.")
                 continue
 
-            try:
-                # Obsługa stawki
-                if stawka is None or stawka == '':
-                    stawka = Decimal(0)
-                else:
-                    stawka = Decimal(stawka)
-            except (TypeError, InvalidOperation) as e:
-                logger.error(f"Błąd konwersji stawki w wierszu {idx}: {stawka}. Ustawiono 0. Błąd: {e}")
-                stawka = Decimal(0)  # Domyślna wartość
+            model_str = str(model).strip()
+            if model_str in models_seen:
+                continue
+            models_seen.add(model_str)
 
-            # Dodawanie produktu z marką
             try:
-                Produkt.objects.update_or_create(
-                    model=model,
-                    defaults={
-                        'stawka': stawka,
-                        'grupa_towarowa': grupa_towarowa or 'Nieznana',
-                        'marka': marka or 'Nieznana'
-                    }
-                )
-            except Exception as e:
-                logger.error(f"Błąd podczas tworzenia produktu w wierszu {idx}: {e}")
+                if stawka is None or stawka == '':
+                    stawka_val = Decimal(0)
+                else:
+                    stawka_val = Decimal(str(stawka).replace(',', '.'))
+            except (TypeError, InvalidOperation, ValueError) as e:
+                logger.error(f"Błąd konwersji stawki w wierszu {idx}: {stawka}. Ustawiono 0. Błąd: {e}")
+                stawka_val = Decimal(0)
+
+            grupa_val = str(grupa_towarowa).strip() if grupa_towarowa else 'Nieznana'
+            marka_val = str(marka).strip() if marka else 'Nieznana'
+
+            if model_str in existing_products:
+                p = existing_products[model_str]
+                if p.stawka != stawka_val or p.grupa_towarowa != grupa_val or p.marka != marka_val:
+                    p.stawka = stawka_val
+                    p.grupa_towarowa = grupa_val
+                    p.marka = marka_val
+                    products_to_update.append(p)
+            else:
+                products_to_create.append(Produkt(
+                    model=model_str,
+                    stawka=stawka_val,
+                    grupa_towarowa=grupa_val,
+                    marka=marka_val
+                ))
+
+        if products_to_create:
+            Produkt.objects.bulk_create(products_to_create, batch_size=500)
+        
+        if products_to_update:
+            Produkt.objects.bulk_update(products_to_update, ['stawka', 'grupa_towarowa', 'marka'], batch_size=500)
 
         return render(request, 'produkty/import_success.html')
     elif request.method == 'POST':
@@ -137,12 +155,19 @@ def import_excel(request):
 logger = logging.getLogger(__name__)
 
 
-def _zapisz_sprzedaz_i_zadania(zatwierdzone_modele, data_sprzedazy):
+def _zapisz_sprzedaz_i_zadania(zatwierdzone_modele, data_sprzedazy, nowe_modele_marki=None):
+    if nowe_modele_marki is None:
+        nowe_modele_marki = {}
+
     for model in zatwierdzone_modele:
-        produkt, _ = Produkt.objects.get_or_create(
+        marka_val = nowe_modele_marki.get(model, 'Nieznana')
+        produkt, created = Produkt.objects.get_or_create(
             model=model,
-            defaults={'stawka': 0, 'grupa_towarowa': 'NIEZNANA'}
+            defaults={'stawka': 0, 'grupa_towarowa': 'NIEZNANA', 'marka': marka_val}
         )
+        if not created and produkt.marka == 'Nieznana' and marka_val != 'Nieznana':
+            produkt.marka = marka_val
+            produkt.save()
         sprzedaz = Sprzedaz.objects.create(
             produkt=produkt,
             data_sprzedazy=data_sprzedazy,
@@ -174,7 +199,23 @@ def sprzedaz(request):
                     model = request.POST[key].strip().upper()
                     zatwierdzone_modele.append(model)
 
-            _zapisz_sprzedaz_i_zadania(zatwierdzone_modele, data_sprzedazy)
+            nowe_modele_marki = {}
+            for key in request.POST:
+                if key.startswith('nowy_model_'):
+                    model_idx = key.split('_')[-1]
+                    model = request.POST[key].strip().upper()
+                    marka_id = request.POST.get(f'marka_dla_{model_idx}')
+                    marka_nazwa = 'Nieznana'
+                    if marka_id:
+                        try:
+                            marka_obj = Marka.objects.get(id=marka_id)
+                            marka_nazwa = marka_obj.nazwa
+                        except Marka.DoesNotExist:
+                            pass
+                    nowe_modele_marki[model] = marka_nazwa
+                    zatwierdzone_modele.append(model)
+
+            _zapisz_sprzedaz_i_zadania(zatwierdzone_modele, data_sprzedazy, nowe_modele_marki)
             return redirect('produkty:sprzedaz_sukces')
 
         data_sprzedazy = request.POST.get('data_sprzedazy')
@@ -186,9 +227,11 @@ def sprzedaz(request):
             modele = []
 
         wszystkie_modele = Produkt.objects.values_list('model', flat=True)
+        marki = Marka.objects.all()
 
         sugestie = []
         zatwierdzone_modele = []
+        nieznane_modele = []
 
         for model in modele:
             if model in wszystkie_modele:
@@ -198,17 +241,15 @@ def sprzedaz(request):
                 if najlepszy_wynik and najlepszy_wynik[1] > 80:
                     sugestie.append((model, najlepszy_wynik[0]))
                 else:
-                    Produkt.objects.get_or_create(
-                        model=model,
-                        defaults={'stawka': 0, 'grupa_towarowa': 'NIEZNANA'}
-                    )
-                    zatwierdzone_modele.append(model)
+                    nieznane_modele.append(model)
 
-        if sugestie:
+        if sugestie or nieznane_modele:
             context = {
                 'sugestie': sugestie,
+                'nieznane_modele': nieznane_modele,
                 'data_sprzedazy': data_sprzedazy,
                 'zatwierdzone_modele': zatwierdzone_modele,
+                'marki': marki,
             }
             return render(request, 'produkty/sprzedaz_sugestie.html', context)
 
@@ -271,13 +312,31 @@ def podsumowanie_sprzedazy(request):
         .order_by('-suma_prowizji')
     )
 
+    grupa_beko_marki = ['BEKO', 'GRUNDIG']
+    grupa_whirlpool_marki = ['WHIRLPOOL', 'INDESIT', 'HOTPOINT']
+
+    grupa_beko = []
+    grupa_whirlpool = []
+    inne = []
+
+    for s in sprzedaz_podsumowanie:
+        marka = s['produkt__marka'].upper() if s['produkt__marka'] else ''
+        if marka in grupa_beko_marki:
+            grupa_beko.append(s)
+        elif marka in grupa_whirlpool_marki:
+            grupa_whirlpool.append(s)
+        else:
+            inne.append(s)
+
     agregaty = sprzedaz_annotated.aggregate(
         calkowita_liczba_sztuk=Sum('liczba_sztuk'),
         calkowita_prowizja=Sum('obliczona_prowizja')
     )
 
     context = {
-        'sprzedaz': sprzedaz_podsumowanie,
+        'grupa_beko': grupa_beko,
+        'grupa_whirlpool': grupa_whirlpool,
+        'grupa_inne': inne,
         'liczba_sztuk': agregaty['calkowita_liczba_sztuk'] or 0,
         'calkowita_prowizja': agregaty['calkowita_prowizja'] or 0,
         'data_od': data_od,
@@ -591,11 +650,49 @@ def zadania_view(request, year, month):
 @login_required
 def zadanie_dodaj(request):
     """Widok do dodawania nowego zadania"""
+    import json
+    
     if request.method == 'POST':
-        form = ZadanieForm(request.POST)
-        if form.is_valid():
-            form.save()
-            return redirect('produkty:zadania_management')
+        json_data = request.POST.get('zadanie_json')
+        if json_data and json_data.strip():
+            try:
+                dane = json.loads(json_data)
+                nazwa = dane.get('nazwa', 'Zadanie z JSON')
+                opis = dane.get('opis', '')
+                data_start = dane.get('data_start')
+                data_koniec = dane.get('data_koniec')
+                target = dane.get('target', 'ilosc')
+                prog_1 = dane.get('prog_1')
+                prog_1_premia = dane.get('prog_1_premia')
+                prog_2 = dane.get('prog_2')
+                prog_2_premia = dane.get('prog_2_premia')
+                modele = dane.get('modele', [])
+
+                zadanie = Zadanie.objects.create(
+                    nazwa=nazwa, opis=opis,
+                    data_start=data_start, data_koniec=data_koniec,
+                    target=target,
+                    prog_1=prog_1, prog_1_premia=prog_1_premia,
+                    prog_2=prog_2, prog_2_premia=prog_2_premia
+                )
+
+                for model in modele:
+                    produkt, _ = Produkt.objects.get_or_create(
+                        model=model,
+                        defaults={'stawka': 0, 'grupa_towarowa': 'NIEZNANA', 'marka': 'Nieznana'}
+                    )
+                    zadanie.produkty.add(produkt)
+                
+                return redirect('produkty:zadania_management')
+            except json.JSONDecodeError as e:
+                logger.error(f"Błąd parsowania JSON dla zadania: {e}")
+                form = ZadanieForm(request.POST)
+                form.add_error(None, "Nieprawidłowy format JSON. Popraw błędy i spróbuj ponownie.")
+        else:
+            form = ZadanieForm(request.POST)
+            if form.is_valid():
+                form.save()
+                return redirect('produkty:zadania_management')
     else:
         form = ZadanieForm()
     
