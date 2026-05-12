@@ -7,11 +7,9 @@
 
 {% block content %}
 <div class="container mt-4">
-    <h2>{% if form.instance.pk %}Edytuj Zadanie{% else %}Dodaj Nowe Zadanie{% endif %}</h2>
+    <h2 class="mb-4">{% if form.instance.pk %}Edytuj Zadanie{% else %}Dodaj Nowe Zadanie{% endif %}</h2>
 
-    <form method="post" class="mt-4">
-        {% csrf_token %}
-        
+    {% if not form.instance.pk %}
         {% if form.non_field_errors %}
             <div class="alert alert-danger">
                 {{ form.non_field_errors }}
@@ -19,16 +17,33 @@
         {% endif %}
 
         <div class="card mb-4">
-            <div class="card-header bg-secondary text-white">
-                Opcja 1: Wgraj z JSON
+            <div class="card-header bg-secondary text-white d-flex justify-content-between align-items-center">
+                <span>Opcja 1: Wgraj z JSON</span>
+                <button type="button" class="btn btn-sm btn-light" data-bs-toggle="modal" data-bs-target="#jsonHelpModal">
+                    <i class="bi bi-question-circle"></i> Wzór JSON
+                </button>
             </div>
             <div class="card-body">
-                <p class="text-muted small">Wklej skopiowany kod JSON z zadaniami. Zignoruje to poniższe pola.</p>
-                <textarea name="zadanie_json" class="form-control" rows="5" placeholder='{"nazwa": "Zadanie", "data_start": "2024-05-01", ...}'></textarea>
+                <form method="post" action="{% url 'produkty:nowe_zadanie' %}">
+                    {% csrf_token %}
+                    <p class="text-muted small">Wklej skopiowany kod JSON z zadaniami i kliknij Zapisz z JSON.</p>
+                    <textarea name="zadanie_json" class="form-control mb-3" rows="5" placeholder='{"nazwa": "Zadanie", "data_start": "2024-05-01", ...}' required></textarea>
+                    <button type="submit" class="btn btn-primary">Zapisz z JSON</button>
+                </form>
             </div>
         </div>
 
         <h4 class="mb-3">Opcja 2: Uzupełnij ręcznie</h4>
+    {% endif %}
+
+    <form method="post" action="{% if form.instance.pk %}{% url 'produkty:edytuj_zadanie' form.instance.pk %}{% else %}{% url 'produkty:nowe_zadanie' %}{% endif %}" class="mt-4">
+        {% csrf_token %}
+        
+        {% if form.non_field_errors and form.instance.pk %}
+            <div class="alert alert-danger">
+                {{ form.non_field_errors }}
+            </div>
+        {% endif %}
 
         <div class="row">
             <div class="col-md-6 mb-3">
@@ -101,11 +116,39 @@
         </div>
 
         <div class="mb-3">
-            <button type="submit" class="btn btn-primary">Zapisz</button>
+            <button type="submit" class="btn btn-primary">Zapisz{% if not form.instance.pk %} ręcznie{% endif %}</button>
             <a href="{% url 'produkty:zadania_management' %}" class="btn btn-secondary">Anuluj</a>
         </div>
-    
     </form>
+</div>
+
+<!-- Modal Wzór JSON -->
+<div class="modal fade" id="jsonHelpModal" tabindex="-1" aria-labelledby="jsonHelpModalLabel" aria-hidden="true">
+  <div class="modal-dialog modal-lg">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h5 class="modal-title" id="jsonHelpModalLabel">Wzór formatu JSON</h5>
+        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+      </div>
+      <div class="modal-body">
+        <pre><code>{
+  "nazwa": "TASK - Chłodnictwo",
+  "data_start": "2024-05-01",
+  "data_koniec": "2024-05-31",
+  "target": "ilosc",
+  "prog_1": 5,
+  "prog_1_premia": 300.0,
+  "prog_2": 8,
+  "prog_2_premia": 500.0,
+  "modele": [
+    "WHK26363XBR5E",
+    "WHK26403XP6E",
+    "WHK25364W4E"
+  ]
+}</code></pre>
+      </div>
+    </div>
+  </div>
 </div>
 {% endblock %}
 

@@ -63,6 +63,36 @@ Dashboard
         <h2 class="tools-header">Narzędzia i Akcje</h2>
         <div class="row tools-grid">
             <div class="col-lg-3 col-md-6 mb-4">
+                <a href="{% url 'produkty:otwarcie_dnia' %}" class="tool-card-link">
+                    <div class="tool-card">
+                        <div class="card-body">
+                            <i class="fas fa-sun tool-icon" style="color: #f1c40f;"></i>
+                            <h5 class="card-title">Rozpocznij Dzień</h5>
+                        </div>
+                    </div>
+                </a>
+            </div>
+            <div class="col-lg-3 col-md-6 mb-4">
+                <a href="{% url 'produkty:zamkniecie_dnia' %}" class="tool-card-link">
+                    <div class="tool-card">
+                        <div class="card-body">
+                            <i class="fas fa-moon tool-icon" style="color: #2c3e50;"></i>
+                            <h5 class="card-title">Zakończ Dzień</h5>
+                        </div>
+                    </div>
+                </a>
+            </div>
+            <div class="col-lg-3 col-md-6 mb-4">
+                <a href="{% url 'produkty:grafik' %}" class="tool-card-link">
+                    <div class="tool-card">
+                        <div class="card-body">
+                            <i class="fas fa-calendar-check tool-icon"></i>
+                            <h5 class="card-title">Grafik Pracy</h5>
+                        </div>
+                    </div>
+                </a>
+            </div>
+            <div class="col-lg-3 col-md-6 mb-4">
                 <a href="{% url 'produkty:zadania_management' %}" class="tool-card-link">
                     <div class="tool-card">
                         <div class="card-body">
@@ -132,17 +162,7 @@ Dashboard
                     </div>
                 </a>
             </div>
-            <div class="col-lg-3 col-md-6 mb-4">
-                <a href="{% url 'produkty:delete_sales_for_day' %}" class="tool-card-link">
-                    <div class="tool-card">
-                        <div class="card-body">
-                            <i class="fas fa-trash-alt tool-icon"></i>
-                            <h5 class="card-title">Usuń Sprzedaż z Dnia</h5>
-                        </div>
-                    </div>
-                </a>
-            </div>
-        </div></div>
+        </div>
 
 <style>
 .dashboard-container {

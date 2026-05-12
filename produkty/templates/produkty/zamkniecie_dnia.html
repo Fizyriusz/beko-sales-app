@@ -1,0 +1,42 @@
+{% extends 'produkty/base.html' %}
+
+{% block title %}Zamknięcie Dnia{% endblock %}
+
+{% block content %}
+<div class="container mt-4">
+    <h2>Zakończ Dzień Pracy: {{ dzien.data }}</h2>
+    <p class="text-muted">Godzina otwarcia: {{ dzien.czas_otwarcia|time:"H:i" }}</p>
+
+    <div class="card mt-4">
+        <div class="card-header bg-dark text-white">
+            <strong>CHECKLISTA KONTROLNA – AMBASADORZY BEKO EUROPE</strong>
+        </div>
+        <div class="card-body">
+            <form method="post">
+                {% csrf_token %}
+                
+                <div class="list-group mb-4">
+                    {% for punkt in punkty %}
+                    <label class="list-group-item d-flex gap-2">
+                        <input class="form-check-input flex-shrink-0" type="checkbox" name="punkt_{{ punkt.id }}" value="on" 
+                        {% for k, v in odp_dict.items %}{% if k == punkt.id and v %}checked{% endif %}{% endfor %}>
+                        <span>
+                            {{ punkt.tekst }}
+                        </span>
+                    </label>
+                    {% empty %}
+                    <div class="alert alert-info">Brak zdefiniowanych punktów checklisty. Administrator może je dodać w panelu.</div>
+                    {% endfor %}
+                </div>
+
+                <div class="mb-3">
+                    <label class="form-label fw-bold">Notatka ze sprzedaży / Wyniki dnia / Uwagi:</label>
+                    <textarea name="notatka_sprzedaz" class="form-control" rows="4">{{ dzien.notatka_sprzedaz|default:"" }}</textarea>
+                </div>
+                
+                <button type="submit" class="btn btn-primary btn-lg w-100">Zakończ dzień i Zapisz Raport</button>
+            </form>
+        </div>
+    </div>
+</div>
+{% endblock %}

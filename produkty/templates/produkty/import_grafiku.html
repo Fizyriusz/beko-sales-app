@@ -1,0 +1,42 @@
+{% extends 'produkty/base.html' %}
+
+{% block title %}Import Grafiku{% endblock %}
+
+{% block content %}
+<div class="container mt-4">
+    <h2>Wgraj Grafik z Excela</h2>
+    
+    {% if error %}
+    <div class="alert alert-danger">{{ error }}</div>
+    {% endif %}
+
+    <div class="card mt-4">
+        <div class="card-body">
+            <form method="post" enctype="multipart/form-data">
+                {% csrf_token %}
+                
+                {% if users %}
+                <div class="mb-3">
+                    <label class="form-label">Dla użytkownika:</label>
+                    <select name="user_id" class="form-select" required>
+                        {% for u in users %}
+                        <option value="{{ u.id }}">{{ u.username }}</option>
+                        {% endfor %}
+                    </select>
+                </div>
+                {% endif %}
+                
+                <div class="mb-3">
+                    <label class="form-label">Wybierz plik Excel z grafikiem (.xlsx)</label>
+                    <input type="file" name="file" class="form-control" accept=".xlsx" required>
+                </div>
+                
+                <p class="text-muted small">Wymagany format na podstawie przesłanego wzoru (kolumny od A lub B).<br>System analizuje wiersze: Kolumna z Datą, Kolumna Start (np. 10:00), Kolumna Koniec (19:00), Kolumna Suma godzin, Kolumna Notatka.</p>
+                
+                <button type="submit" class="btn btn-primary">Wgraj grafik</button>
+                <a href="{% url 'produkty:grafik' %}" class="btn btn-secondary">Wróć</a>
+            </form>
+        </div>
+    </div>
+</div>
+{% endblock %}

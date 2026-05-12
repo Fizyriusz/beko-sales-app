@@ -20,3 +20,20 @@ class ZadanieAdmin(admin.ModelAdmin):
 admin.site.register(GrupaProduktowa)
 admin.site.register(Marka)
 admin.site.register(Ekspozycja)
+
+from .models import PunktChecklisty, DzienPracy, OdpowiedzChecklisty, GrafikPracy
+
+@admin.register(PunktChecklisty)
+class PunktChecklistyAdmin(admin.ModelAdmin):
+    list_display = ('tekst', 'aktywny', 'kolejnosc')
+    list_editable = ('aktywny', 'kolejnosc')
+    ordering = ('kolejnosc',)
+
+@admin.register(GrafikPracy)
+class GrafikPracyAdmin(admin.ModelAdmin):
+    list_display = ('user', 'data', 'godzina_rozpoczecia', 'godzina_zakonczenia', 'suma_godzin')
+    list_filter = ('data', 'user')
+    date_hierarchy = 'data'
+
+admin.site.register(DzienPracy)
+admin.site.register(OdpowiedzChecklisty)

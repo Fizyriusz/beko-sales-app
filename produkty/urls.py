@@ -35,4 +35,12 @@ urlpatterns = [
     path('klienci/zmien/<str:operacja>/', views.zmien_licznik, name='zmien_licznik'),
     path('import/delete-all/', views.delete_all_models, name='delete_all_models'),
     path('admin/delete-sales/', views.delete_sales_for_day, name='delete_sales_for_day'),
+    
+    # Otwarcie/Zamkniecie dnia
+    path('dzien/otwarcie/', views.otwarcie_dnia, name='otwarcie_dnia'),
+    path('dzien/zamkniecie/', views.zamkniecie_dnia, name='zamkniecie_dnia'),
+    
+    # Grafik
+    path('grafik/', views.grafik_view, name='grafik'),
+    path('grafik/import/', views.import_grafiku, name='import_grafiku'),
 ]

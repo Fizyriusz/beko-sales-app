@@ -768,6 +768,159 @@ def szczegoly_zadania(request, zadanie_id):
     return render(request, 'produkty/szczegoly_zadania.html', context)
 
 @login_required
+def otwarcie_dnia(request):
+    import datetime
+    today = datetime.date.today()
+    from django.utils import timezone
+    dzien, created = DzienPracy.objects.get_or_create(
+        user=request.user,
+        data=today,
+        defaults={'czas_otwarcia': timezone.now()}
+    )
+    return redirect('produkty:home')
+
+@login_required
+def zamkniecie_dnia(request):
+    import datetime
+    from django.utils import timezone
+    today = datetime.date.today()
+    
+    dzien = DzienPracy.objects.filter(user=request.user, data=today).first()
+    if not dzien:
+        return redirect('produkty:otwarcie_dnia')
+        
+    punkty = PunktChecklisty.objects.filter(aktywny=True)
+    
+    if request.method == 'POST':
+        notatka = request.POST.get('notatka_sprzedaz', '')
+        dzien.notatka_sprzedaz = notatka
+        dzien.czas_zamkniecia = timezone.now()
+        dzien.save()
+        
+        for punkt in punkty:
+            wykonano = request.POST.get(f'punkt_{punkt.id}') == 'on'
+            OdpowiedzChecklisty.objects.update_or_create(
+                dzien_pracy=dzien,
+                punkt=punkt,
+                defaults={'wykonano': wykonano}
+            )
+            
+        return redirect('produkty:home')
+        
+    odpowiedzi = OdpowiedzChecklisty.objects.filter(dzien_pracy=dzien)
+    odp_dict = {o.punkt_id: o.wykonano for o in odpowiedzi}
+    
+    context = {
+        'dzien': dzien,
+        'punkty': punkty,
+        'odp_dict': odp_dict
+    }
+    return render(request, 'produkty/zamkniecie_dnia.html', context)
+
+@login_required
+def grafik_view(request):
+    import datetime
+    today = datetime.date.today()
+    month = int(request.GET.get('month', today.month))
+    year = int(request.GET.get('year', today.year))
+    
+    is_admin = request.user.is_superuser or request.user.is_staff
+    
+    if is_admin:
+        wybrany_user = request.GET.get('user', request.user.id)
+        grafik = GrafikPracy.objects.filter(data__year=year, data__month=month, user_id=wybrany_user).order_by('data')
+        users = User.objects.all()
+    else:
+        grafik = GrafikPracy.objects.filter(user=request.user, data__year=year, data__month=month).order_by('data')
+        users = None
+        wybrany_user = request.user.id
+
+    context = {
+        'grafik': grafik,
+        'year': year,
+        'month': month,
+        'is_admin': is_admin,
+        'users': users,
+        'wybrany_user': int(wybrany_user) if wybrany_user else None
+    }
+    return render(request, 'produkty/grafik.html', context)
+
+@login_required
+def import_grafiku(request):
+    if request.method == 'POST' and 'file' in request.FILES:
+        excel_file = request.FILES['file']
+        user_id = request.POST.get('user_id', request.user.id)
+        
+        if not (request.user.is_superuser or request.user.is_staff):
+            user_id = request.user.id
+            
+        try:
+            wb = openpyxl.load_workbook(excel_file, data_only=True)
+            sheet = wb.active
+        except Exception as e:
+            logger.error(f"Error loading excel: {e}")
+            users = User.objects.all() if (request.user.is_superuser or request.user.is_staff) else None
+            return render(request, 'produkty/import_grafiku.html', {'error': 'Nieprawidłowy plik.', 'users': users})
+            
+        from datetime import datetime, time
+        from django.contrib.auth.models import User
+        user_obj = User.objects.get(id=user_id)
+        
+        for row in sheet.iter_rows(min_row=1, values_only=True):
+            if len(row) < 2 or not row[1]:
+                continue
+                
+            data_val = row[1]
+            if isinstance(data_val, str):
+                try:
+                    data_val = datetime.strptime(data_val.strip(), '%Y-%m-%d').date()
+                except ValueError:
+                    continue
+            elif isinstance(data_val, datetime):
+                data_val = data_val.date()
+            else:
+                continue
+                
+            start_val = row[2] if len(row) > 2 else None
+            koniec_val = row[3] if len(row) > 3 else None
+            suma_val = row[4] if len(row) > 4 else None
+            notatka_val = row[5] if len(row) > 5 else ''
+            
+            def parse_time(val):
+                if isinstance(val, time): return val
+                if isinstance(val, str) and val.strip():
+                    try: return datetime.strptime(val.strip(), '%H:%M').time()
+                    except ValueError: return None
+                return None
+                
+            start_time = parse_time(start_val)
+            koniec_time = parse_time(koniec_val)
+            
+            suma_dec = None
+            if suma_val:
+                try:
+                    suma_dec = Decimal(str(suma_val).replace(',', '.'))
+                except:
+                    pass
+                    
+            GrafikPracy.objects.update_or_create(
+                user=user_obj,
+                data=data_val,
+                defaults={
+                    'godzina_rozpoczecia': start_time,
+                    'godzina_zakonczenia': koniec_time,
+                    'suma_godzin': suma_dec,
+                    'notatka': str(notatka_val) if notatka_val else ''
+                }
+            )
+            
+        return redirect('produkty:grafik')
+    
+    from django.contrib.auth.models import User
+    users = User.objects.all() if (request.user.is_superuser or request.user.is_staff) else None
+    return render(request, 'produkty/import_grafiku.html', {'users': users})
+
+@login_required
 def calendar_view(request, year=None, month=None):
     today = datetime.now().date()
     if year is None or month is None:
