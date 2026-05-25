@@ -281,3 +281,7 @@ class DailySalesTestCase(TestCase):
     def test_otwarcie_dnia(self):
         response = self.client.get(reverse("produkty:otwarcie_dnia"))
         self.assertEqual(response.status_code, 302)
+
+    def test_grafik_view(self):
+        response = self.client.get(reverse("produkty:grafik"))
+        self.assertEqual(response.status_code, 200)

@@ -860,24 +860,38 @@ def otwarcie_dnia(request):
     import datetime
     today = datetime.date.today()
     from django.utils import timezone
+    from django.contrib import messages
+    
     dzien, created = DzienPracy.objects.get_or_create(
         user=request.user,
         data=today,
         defaults={'czas_otwarcia': timezone.now()}
     )
+    if created:
+        messages.success(request, "Pomyślnie rozpoczęto dzień pracy!")
+    else:
+        messages.info(request, "Dzień pracy został już rozpoczęty wcześniej.")
     return redirect('produkty:home')
 
 @login_required
 def zamkniecie_dnia(request):
     import datetime
     from django.utils import timezone
+    from django.contrib import messages
     today = datetime.date.today()
     
     dzien = DzienPracy.objects.filter(user=request.user, data=today).first()
     if not dzien:
         return redirect('produkty:otwarcie_dnia')
         
-    punkty = PunktChecklisty.objects.filter(aktywny=True)
+    # Unikamy dublowania punktów o tej samej treści w bazie danych
+    all_punkty = list(PunktChecklisty.objects.filter(aktywny=True))
+    seen_texts = set()
+    punkty = []
+    for p in all_punkty:
+        if p.tekst not in seen_texts:
+            seen_texts.add(p.tekst)
+            punkty.append(p)
     
     if request.method == 'POST':
         notatka = request.POST.get('notatka_sprzedaz', '')
@@ -893,6 +907,7 @@ def zamkniecie_dnia(request):
                 defaults={'wykonano': wykonano}
             )
             
+        messages.success(request, "Dzień pracy został pomyślnie zakończony, a raport zapisany!")
         return redirect('produkty:home')
         
     odpowiedzi = OdpowiedzChecklisty.objects.filter(dzien_pracy=dzien)
@@ -916,12 +931,16 @@ def grafik_view(request):
     
     if is_admin:
         wybrany_user = request.GET.get('user', request.user.id)
-        grafik = GrafikPracy.objects.filter(data__year=year, data__month=month, user_id=wybrany_user).order_by('data')
+        try:
+            wybrany_user_id = int(wybrany_user) if wybrany_user else request.user.id
+        except ValueError:
+            wybrany_user_id = request.user.id
+        grafik = GrafikPracy.objects.filter(data__year=year, data__month=month, user_id=wybrany_user_id).order_by('data')
         users = User.objects.all()
     else:
         grafik = GrafikPracy.objects.filter(user=request.user, data__year=year, data__month=month).order_by('data')
         users = None
-        wybrany_user = request.user.id
+        wybrany_user_id = request.user.id
 
     context = {
         'grafik': grafik,
@@ -929,7 +948,7 @@ def grafik_view(request):
         'month': month,
         'is_admin': is_admin,
         'users': users,
-        'wybrany_user': int(wybrany_user) if wybrany_user else None
+        'wybrany_user': wybrany_user_id
     }
     return render(request, 'produkty/grafik.html', context)
 
