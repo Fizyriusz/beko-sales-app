@@ -277,3 +277,7 @@ class DailySalesTestCase(TestCase):
         )
         self.assertEqual(response.status_code, 200)
         self.assertContains(response, "DAY1")
+
+    def test_otwarcie_dnia(self):
+        response = self.client.get(reverse("produkty:otwarcie_dnia"))
+        self.assertEqual(response.status_code, 302)

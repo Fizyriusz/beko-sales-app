@@ -1,5 +1,5 @@
 from django.shortcuts import render, redirect, get_object_or_404
-from .models import Produkt, Sprzedaz, Zadanie, Ekspozycja, GrupaProduktowa, Marka, KlientCounter
+from .models import Produkt, Sprzedaz, Zadanie, Ekspozycja, GrupaProduktowa, Marka, KlientCounter, DzienPracy, GrafikPracy, PunktChecklisty, OdpowiedzChecklisty
 from .forms import ZadanieForm, ProduktForm
 import openpyxl
 from openpyxl.utils.exceptions import InvalidFileException
