@@ -204,14 +204,9 @@ def sprzedaz(request):
                 if key.startswith('nowy_model_'):
                     model_idx = key.split('_')[-1]
                     model = request.POST[key].strip().upper()
-                    marka_id = request.POST.get(f'marka_dla_{model_idx}')
-                    marka_nazwa = 'Nieznana'
-                    if marka_id:
-                        try:
-                            marka_obj = Marka.objects.get(id=marka_id)
-                            marka_nazwa = marka_obj.nazwa
-                        except Marka.DoesNotExist:
-                            pass
+                    marka_nazwa = request.POST.get(f'marka_dla_{model_idx}')
+                    if not marka_nazwa:
+                        marka_nazwa = 'Nieznana'
                     nowe_modele_marki[model] = marka_nazwa
                     zatwierdzone_modele.append(model)
 
@@ -227,7 +222,7 @@ def sprzedaz(request):
             modele = []
 
         wszystkie_modele = Produkt.objects.values_list('model', flat=True)
-        marki = Marka.objects.all()
+        marki = Produkt.objects.exclude(marka__isnull=True).exclude(marka='').exclude(marka='Nieznana').exclude(marka='NIEZNANA').values_list('marka', flat=True).distinct().order_by('marka')
 
         sugestie = []
         zatwierdzone_modele = []
@@ -264,21 +259,37 @@ def sprzedaz_sukces(request):
 
 @login_required
 def podsumowanie_sprzedazy(request):
-    data_od = request.GET.get('data_od')
-    data_do = request.GET.get('data_do')
+    data_od_str = request.GET.get('data_od')
+    data_do_str = request.GET.get('data_do')
     produkt_nazwa = request.GET.get('produkt')
     marka_nazwa = request.GET.get('marka')
 
-    if not data_od and not data_do:
+    # Normalize empty strings to None
+    if not data_od_str:
+        data_od_str = None
+    if not data_do_str:
+        data_do_str = None
+
+    if not data_od_str and not data_do_str:
         today = datetime.now().date()
         start_of_month = today.replace(day=1)
         end_of_month = (start_of_month + timedelta(days=32)).replace(day=1) - timedelta(days=1)
         
-        data_od = start_of_month.strftime('%Y-%m-%d')
-        data_do = end_of_month.strftime('%Y-%m-%d')
+        data_od = start_of_month
+        data_do = end_of_month
+    else:
+        try:
+            data_od = datetime.strptime(data_od_str, '%Y-%m-%d').date() if data_od_str else None
+        except ValueError:
+            data_od = None
+        try:
+            data_do = datetime.strptime(data_do_str, '%Y-%m-%d').date() if data_do_str else None
+        except ValueError:
+            data_do = None
 
-    # Nawigacja po miesiącach
-    current_month_start = datetime.strptime(data_od, '%Y-%m-%d').date()
+    # Base monthly navigation on data_od if available, otherwise today
+    base_date = data_od if data_od else datetime.now().date()
+    current_month_start = base_date.replace(day=1)
     
     prev_month_end = current_month_start - timedelta(days=1)
     prev_month_start = prev_month_end.replace(day=1)
@@ -312,6 +323,44 @@ def podsumowanie_sprzedazy(request):
         .order_by('-suma_prowizji')
     )
 
+    # Dictionary for tests
+    sprzedaz_dict = {}
+    for s in sprzedaz_podsumowanie:
+        marka = s['produkt__marka'] or ''
+        model = s['produkt__model'] or ''
+        key = f"{marka}_{model}"
+        sprzedaz_dict[key] = {
+            'marka': marka,
+            'model': model,
+            'stawka': s['produkt__stawka'],
+            'suma_prowizji': s['suma_prowizji'],
+            'liczba_sztuk': s['liczba_sztuk']
+        }
+
+    # Task rewards computation
+    task_rewards = []
+    if data_od and data_do:
+        tasks = Zadanie.objects.filter(data_start__lte=data_do, data_koniec__gte=data_od)
+        for task in tasks:
+            sales_in_task = Sprzedaz.objects.filter(
+                produkt__in=task.produkty.all(),
+                data_sprzedazy__range=(task.data_start, task.data_koniec)
+            )
+            total_sold = sales_in_task.aggregate(suma=Sum('liczba_sztuk'))['suma'] or 0
+            
+            premia = Decimal("0.00")
+            if task.prog_2 and total_sold >= task.prog_2:
+                premia = task.prog_2_premia or Decimal("0.00")
+            elif task.prog_1 and total_sold >= task.prog_1:
+                premia = task.prog_1_premia or Decimal("0.00")
+                
+            if premia > 0:
+                task_rewards.append({
+                    'nazwa': task.nazwa,
+                    'sprzedane': total_sold,
+                    'premia': premia
+                })
+
     grupa_beko_marki = ['BEKO', 'GRUNDIG']
     grupa_whirlpool_marki = ['WHIRLPOOL', 'INDESIT', 'HOTPOINT']
 
@@ -333,6 +382,9 @@ def podsumowanie_sprzedazy(request):
         calkowita_prowizja=Sum('obliczona_prowizja')
     )
 
+    # Pobranie unikalnych marek dla filtra
+    dostepne_marki = Produkt.objects.exclude(marka__isnull=True).exclude(marka='').exclude(marka='Nieznana').exclude(marka='NIEZNANA').values_list('marka', flat=True).distinct().order_by('marka')
+
     context = {
         'grupa_beko': grupa_beko,
         'grupa_whirlpool': grupa_whirlpool,
@@ -341,12 +393,15 @@ def podsumowanie_sprzedazy(request):
         'calkowita_prowizja': agregaty['calkowita_prowizja'] or 0,
         'data_od': data_od,
         'data_do': data_do,
-        'produkt': produkt_nazwa,
-        'marka': marka_nazwa,
+        'produkt': produkt_nazwa or '',
+        'marka': marka_nazwa or '',
         'prev_month_data_od': prev_month_start.strftime('%Y-%m-%d'),
         'prev_month_data_do': prev_month_end.strftime('%Y-%m-%d'),
         'next_month_data_od': next_month_start.strftime('%Y-%m-%d'),
         'next_month_data_do': next_month_end.strftime('%Y-%m-%d'),
+        'sprzedaz': sprzedaz_dict,
+        'task_rewards': task_rewards,
+        'dostepne_marki': dostepne_marki,
     }
 
     return render(request, 'produkty/podsumowanie_sprzedazy.html', context)
@@ -651,48 +706,78 @@ def zadania_view(request, year, month):
 def zadanie_dodaj(request):
     """Widok do dodawania nowego zadania"""
     import json
+    from datetime import datetime
     
     if request.method == 'POST':
         json_data = request.POST.get('zadanie_json')
         if json_data and json_data.strip():
             try:
                 dane = json.loads(json_data)
-                nazwa = dane.get('nazwa', 'Zadanie z JSON')
-                opis = dane.get('opis', '')
-                data_start = dane.get('data_start')
-                data_koniec = dane.get('data_koniec')
-                target = dane.get('target', 'ilosc')
-                prog_1 = dane.get('prog_1')
-                prog_1_premia = dane.get('prog_1_premia')
-                prog_2 = dane.get('prog_2')
-                prog_2_premia = dane.get('prog_2_premia')
-                modele = dane.get('modele', [])
-
-                zadanie = Zadanie.objects.create(
-                    nazwa=nazwa, opis=opis,
-                    data_start=data_start, data_koniec=data_koniec,
-                    target=target,
-                    prog_1=prog_1, prog_1_premia=prog_1_premia,
-                    prog_2=prog_2, prog_2_premia=prog_2_premia
-                )
-
-                for model in modele:
-                    produkt, _ = Produkt.objects.get_or_create(
-                        model=model,
-                        defaults={'stawka': 0, 'grupa_towarowa': 'NIEZNANA', 'marka': 'Nieznana'}
-                    )
-                    zadanie.produkty.add(produkt)
                 
+                # Obsługa zarówno pojedynczego obiektu, jak i listy zadań
+                if isinstance(dane, list):
+                    zadania_dane = dane
+                else:
+                    zadania_dane = [dane]
+
+                last_redirect_date = None
+                
+                for item in zadania_dane:
+                    nazwa = item.get('nazwa', 'Zadanie z JSON')
+                    opis = item.get('opis', '')
+                    data_start = item.get('data_start')
+                    data_koniec = item.get('data_koniec')
+                    target = item.get('target', 'ilosc')
+                    prog_1 = item.get('prog_1')
+                    prog_1_premia = item.get('prog_1_premia')
+                    prog_2 = item.get('prog_2')
+                    prog_2_premia = item.get('prog_2_premia')
+                    typ = item.get('typ', 'KONKRETNE_MODELE')
+                    mnoznik_mix = item.get('mnoznik_mix')
+                    prog_mix = item.get('prog_mix')
+                    modele = item.get('modele', [])
+
+                    zadanie = Zadanie.objects.create(
+                        nazwa=nazwa, opis=opis,
+                        data_start=data_start, data_koniec=data_koniec,
+                        target=target,
+                        prog_1=prog_1, prog_1_premia=prog_1_premia,
+                        prog_2=prog_2, prog_2_premia=prog_2_premia,
+                        typ=typ, mnoznik_mix=mnoznik_mix, prog_mix=prog_mix
+                    )
+
+                    for model in modele:
+                        produkt, _ = Produkt.objects.get_or_create(
+                            model=model.strip().upper(),
+                            defaults={'stawka': 0, 'grupa_towarowa': 'NIEZNANA', 'marka': 'Nieznana'}
+                        )
+                        zadanie.produkty.add(produkt)
+                    
+                    if data_start:
+                        try:
+                            last_redirect_date = datetime.strptime(data_start, '%Y-%m-%d')
+                        except ValueError:
+                            pass
+                
+                if last_redirect_date:
+                    return redirect('produkty:zadania_view', year=last_redirect_date.year, month=last_redirect_date.month)
                 return redirect('produkty:zadania_management')
             except json.JSONDecodeError as e:
                 logger.error(f"Błąd parsowania JSON dla zadania: {e}")
                 form = ZadanieForm(request.POST)
                 form.add_error(None, "Nieprawidłowy format JSON. Popraw błędy i spróbuj ponownie.")
+            except Exception as e:
+                logger.error(f"Błąd podczas tworzenia zadania z JSON: {e}")
+                form = ZadanieForm(request.POST)
+                form.add_error(None, f"Błąd bazy danych podczas dodawania zadania: {e}")
         else:
             form = ZadanieForm(request.POST)
             if form.is_valid():
-                form.save()
-                return redirect('produkty:zadania_management')
+                zadanie = form.save()
+                try:
+                    return redirect('produkty:zadania_view', year=zadanie.data_start.year, month=zadanie.data_start.month)
+                except Exception:
+                    return redirect('produkty:zadania_management')
     else:
         form = ZadanieForm()
     
@@ -709,8 +794,11 @@ def zadanie_edytuj(request, zadanie_id):
     if request.method == 'POST':
         form = ZadanieForm(request.POST, instance=zadanie)
         if form.is_valid():
-            form.save()
-            return redirect('produkty:zadania_management')
+            zadanie = form.save()
+            try:
+                return redirect('produkty:zadania_view', year=zadanie.data_start.year, month=zadanie.data_start.month)
+            except Exception:
+                return redirect('produkty:zadania_management')
     else:
         form = ZadanieForm(instance=zadanie)
 
@@ -862,37 +950,72 @@ def import_grafiku(request):
             users = User.objects.all() if (request.user.is_superuser or request.user.is_staff) else None
             return render(request, 'produkty/import_grafiku.html', {'error': 'Nieprawidłowy plik.', 'users': users})
             
+        import datetime as dt_mod
         from datetime import datetime, time
         from django.contrib.auth.models import User
         user_obj = User.objects.get(id=user_id)
         
+        def parse_date(val):
+            if isinstance(val, datetime):
+                return val.date()
+            if isinstance(val, dt_mod.date):
+                return val
+            if isinstance(val, str) and val.strip():
+                clean_val = val.strip()
+                for fmt in ('%Y-%m-%d', '%d.%m.%Y', '%Y/%m/%d'):
+                    try:
+                        return datetime.strptime(clean_val, fmt).date()
+                    except ValueError:
+                        continue
+            return None
+
+        def parse_time(val):
+            if isinstance(val, time): 
+                return val
+            if isinstance(val, datetime): 
+                return val.time()
+            if isinstance(val, (int, float)) and 0 <= val <= 1:
+                total_seconds = int(round(val * 86400))
+                hours = (total_seconds // 3600) % 24
+                minutes = (total_seconds % 3600) // 60
+                return time(hours, minutes)
+            if isinstance(val, str) and val.strip():
+                val_str = val.strip()
+                for fmt in ('%H:%M:%S', '%H:%M', '%I:%M %p', '%I:%M%p'):
+                    try: 
+                        return datetime.strptime(val_str, fmt).time()
+                    except ValueError: 
+                        continue
+            return None
+
+        # Dynamically detect which column contains the date
+        date_col = -1
+        for row in sheet.iter_rows(min_row=1, max_row=15, values_only=True):
+            if not row:
+                continue
+            for idx in range(min(len(row), 3)): # Check columns A, B, C (0, 1, 2)
+                if parse_date(row[idx]) is not None:
+                    date_col = idx
+                    break
+            if date_col != -1:
+                break
+
+        if date_col == -1:
+            date_col = 1 # fallback to column B
+
         for row in sheet.iter_rows(min_row=1, values_only=True):
-            if len(row) < 2 or not row[1]:
+            if len(row) <= date_col:
                 continue
                 
-            data_val = row[1]
-            if isinstance(data_val, str):
-                try:
-                    data_val = datetime.strptime(data_val.strip(), '%Y-%m-%d').date()
-                except ValueError:
-                    continue
-            elif isinstance(data_val, datetime):
-                data_val = data_val.date()
-            else:
+            data_val = parse_date(row[date_col])
+            if not data_val:
                 continue
                 
-            start_val = row[2] if len(row) > 2 else None
-            koniec_val = row[3] if len(row) > 3 else None
-            suma_val = row[4] if len(row) > 4 else None
-            notatka_val = row[5] if len(row) > 5 else ''
+            start_val = row[date_col + 1] if len(row) > date_col + 1 else None
+            koniec_val = row[date_col + 2] if len(row) > date_col + 2 else None
+            suma_val = row[date_col + 3] if len(row) > date_col + 3 else None
+            notatka_val = row[date_col + 4] if len(row) > date_col + 4 else ''
             
-            def parse_time(val):
-                if isinstance(val, time): return val
-                if isinstance(val, str) and val.strip():
-                    try: return datetime.strptime(val.strip(), '%H:%M').time()
-                    except ValueError: return None
-                return None
-                
             start_time = parse_time(start_val)
             koniec_time = parse_time(koniec_val)
             

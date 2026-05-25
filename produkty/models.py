@@ -13,12 +13,17 @@ class Produkt(models.Model):
         return self.model
 
 class Zadanie(models.Model):
+    class Typ(models.TextChoices):
+        MIX_PROWIZJA = "MIX_PROWIZJA", "Mix prowizja"
+        MIX_MNOZNIK = "MIX_MNOZNIK", "Mix mnożnik"
+        KONKRETNE_MODELE = "KONKRETNE_MODELE", "Konkretne modele"
+
     nazwa = models.CharField(max_length=255)
     opis = models.TextField(blank=True)
     produkty = models.ManyToManyField('Produkt', related_name='zadania', blank=True)
     data_start = models.DateField()
     data_koniec = models.DateField()
-    target = models.CharField(max_length=10, choices=[('ilosc', 'Ilość'), ('wartosc', 'Wartość')], default='ilosc')
+    target = models.CharField(max_length=10, choices=[('ilosc', 'Ilość'), ('wartosc', 'Wartość')], default='ilosc', blank=True)
     prog_1 = models.PositiveIntegerField(null=True, blank=True)
     prog_1_premia = models.DecimalField(max_digits=10, decimal_places=2, null=True, blank=True)
     prog_2 = models.PositiveIntegerField(null=True, blank=True)
@@ -27,12 +32,9 @@ class Zadanie(models.Model):
     prog_mix = models.PositiveIntegerField(null=True, blank=True, help_text="Próg dla zadań typu mix")
     typ = models.CharField(
         max_length=20,
-        choices=[
-            ("MIX_PROWIZJA", "Mix prowizja"),
-            ("MIX_MNOZNIK", "Mix mnożnik"),
-            ("KONKRETNE_MODELE", "Konkretne modele"),
-        ],
-        default="KONKRETNE_MODELE",
+        choices=Typ.choices,
+        default=Typ.KONKRETNE_MODELE,
+        blank=True
     )
 
     def __str__(self):

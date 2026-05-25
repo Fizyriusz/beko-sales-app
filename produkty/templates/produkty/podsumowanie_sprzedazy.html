@@ -16,11 +16,11 @@
     <form method="get" action="" class="filter-form">
         <div class="form-group">
             <label for="data_od">Data od:</label>
-            <input type="date" name="data_od" id="data_od" value="{{ data_od }}">
+            <input type="date" name="data_od" id="data_od" value="{{ data_od|date:'Y-m-d' }}">
         </div>
         <div class="form-group">
             <label for="data_do">Data do:</label>
-            <input type="date" name="data_do" id="data_do" value="{{ data_do }}">
+            <input type="date" name="data_do" id="data_do" value="{{ data_do|date:'Y-m-d' }}">
         </div>
         <div class="form-group">
             <label for="produkt">Produkt:</label>
@@ -28,7 +28,12 @@
         </div>
         <div class="form-group">
             <label for="marka">Marka:</label>
-            <input type="text" name="marka" id="marka" placeholder="Wpisz nazwę marki" value="{{ marka }}">
+            <select name="marka" id="marka" style="padding: 6px; border-radius: 4px; border: 1px solid #ccc; width: 170px;">
+                <option value="">--- Wszystkie ---</option>
+                {% for m in dostepne_marki %}
+                    <option value="{{ m }}" {% if m == marka %}selected{% endif %}>{{ m }}</option>
+                {% endfor %}
+            </select>
         </div>
         <div class="form-group">
             <button type="submit">Filtruj</button>

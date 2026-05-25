@@ -13,18 +13,20 @@
             <a href="?year={% if month == 12 %}{{ year|add:'1' }}{% else %}{{ year }}{% endif %}&month={% if month == 12 %}1{% else %}{{ month|add:'1' }}{% endif %}" class="btn btn-outline-secondary">Następny &raquo;</a>
         </div>
         
-        {% if is_admin %}
-        <form method="get" class="d-flex align-items-center">
-            <input type="hidden" name="year" value="{{ year }}">
-            <input type="hidden" name="month" value="{{ month }}">
-            <select name="user" class="form-select me-2" onchange="this.form.submit()">
-                {% for u in users %}
-                <option value="{{ u.id }}" {% if u.id == wybrany_user %}selected{% endif %}>{{ u.username }}</option>
-                {% endfor %}
-            </select>
+        <div class="d-flex align-items-center">
+            {% if is_admin %}
+            <form method="get" class="d-flex align-items-center me-2">
+                <input type="hidden" name="year" value="{{ year }}">
+                <input type="hidden" name="month" value="{{ month }}">
+                <select name="user" class="form-select" onchange="this.form.submit()">
+                    {% for u in users %}
+                    <option value="{{ u.id }}" {% if u.id == wybrany_user %}selected{% endif %}>{{ u.username }}</option>
+                    {% endfor %}
+                </select>
+            </form>
+            {% endif %}
             <a href="{% url 'produkty:import_grafiku' %}" class="btn btn-primary text-nowrap">Wgraj grafik</a>
-        </form>
-        {% endif %}
+        </div>
     </div>
 
     <table class="table table-bordered table-striped mt-3">

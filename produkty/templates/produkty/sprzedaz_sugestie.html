@@ -35,7 +35,7 @@
                             <select name="marka_dla_{{ forloop.counter }}" class="form-control" style="display:inline-block; width:auto;">
                                 <option value="">--- Wybierz markę (opcjonalnie) ---</option>
                                 {% for marka in marki %}
-                                    <option value="{{ marka.id }}">{{ marka.nazwa }}</option>
+                                    <option value="{{ marka }}">{{ marka }}</option>
                                 {% endfor %}
                             </select>
                         </li>

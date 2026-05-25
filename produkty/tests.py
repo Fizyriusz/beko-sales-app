@@ -45,7 +45,7 @@ class SprzedazSugestieTestCase(TestCase):
             1,
         )
 
-        summary = self.client.get(reverse("produkty:podsumowanie_sprzedazy"))
+        summary = self.client.get(reverse("produkty:podsumowanie_sprzedazy") + "?data_od=2024-01-01&data_do=2024-01-31")
         models_in_summary = [d["model"] for d in summary.context["sprzedaz"].values()]
         self.assertIn("ABC123", models_in_summary)
 
@@ -81,7 +81,7 @@ class SprzedazSugestieTestCase(TestCase):
         unique_models = {"ABC123", "NEWMODEL", "XYZ789"}
         self.assertEqual(Sprzedaz.objects.count(), len(unique_models))
 
-        summary = self.client.get(reverse("produkty:podsumowanie_sprzedazy"))
+        summary = self.client.get(reverse("produkty:podsumowanie_sprzedazy") + "?data_od=2024-01-01&data_do=2024-01-31")
         models_in_summary = [d["model"] for d in summary.context["sprzedaz"].values()]
 
         self.assertEqual(len(models_in_summary), len(unique_models))
@@ -257,3 +257,23 @@ class ZadanieTypeTestCase(TestCase):
         self.assertEqual(response.status_code, 302)
         zadanie = Zadanie.objects.get(nazwa="Konkretne modele")
         self.assertEqual(zadanie.typ, Zadanie.Typ.KONKRETNE_MODELE)
+
+
+@override_settings(
+    DATABASES={"default": {"ENGINE": "django.db.backends.sqlite3", "NAME": ":memory:"}}
+)
+class DailySalesTestCase(TestCase):
+    def setUp(self):
+        self.user = User.objects.create_user(username="daytester", password="pass")
+        self.client = Client()
+        self.client.login(username="daytester", password="pass")
+        self.today = timezone.now().date()
+
+    def test_daily_sales_view(self):
+        p = Produkt.objects.create(model="DAY1", stawka=Decimal("15"), grupa_towarowa="AGD")
+        Sprzedaz.objects.create(produkt=p, liczba_sztuk=2, data_sprzedazy=self.today, prowizja=Decimal("5"))
+        response = self.client.get(
+            reverse("produkty:daily_sales", args=[self.today.year, self.today.month, self.today.day])
+        )
+        self.assertEqual(response.status_code, 200)
+        self.assertContains(response, "DAY1")

@@ -6,7 +6,8 @@ class ZadanieForm(forms.ModelForm):
         model = Zadanie
         fields = [
             'nazwa', 'opis', 'produkty', 'data_start', 'data_koniec',
-            'prog_1', 'prog_2'
+            'target', 'prog_1', 'prog_1_premia', 'prog_2', 'prog_2_premia',
+            'mnoznik_mix', 'prog_mix', 'typ'
         ]
         widgets = {
             'nazwa': forms.TextInput(attrs={'class': 'form-control'}),
@@ -14,8 +15,14 @@ class ZadanieForm(forms.ModelForm):
             'produkty': forms.SelectMultiple(attrs={'class': 'form-control', 'size': '10'}),
             'data_start': forms.DateInput(attrs={'class': 'form-control', 'type': 'date'}),
             'data_koniec': forms.DateInput(attrs={'class': 'form-control', 'type': 'date'}),
+            'target': forms.Select(attrs={'class': 'form-control'}),
             'prog_1': forms.NumberInput(attrs={'class': 'form-control'}),
+            'prog_1_premia': forms.NumberInput(attrs={'class': 'form-control'}),
             'prog_2': forms.NumberInput(attrs={'class': 'form-control'}),
+            'prog_2_premia': forms.NumberInput(attrs={'class': 'form-control'}),
+            'mnoznik_mix': forms.NumberInput(attrs={'class': 'form-control'}),
+            'prog_mix': forms.NumberInput(attrs={'class': 'form-control'}),
+            'typ': forms.Select(attrs={'class': 'form-control'}),
         }
 
     def clean(self):
