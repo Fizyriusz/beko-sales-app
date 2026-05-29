@@ -3,7 +3,7 @@ document.addEventListener('DOMContentLoaded', function() {
     const selectedProductsContainer = document.getElementById('selected-products');
     const productFilter = document.getElementById('product-filter');
     const formProdukty = document.querySelector('[name="produkty"]');
-    const form = document.querySelector('form');
+    const form = formProdukty ? formProdukty.closest('form') : null;
 
     function moveProduct(item, fromContainer, toContainer) {
         toContainer.appendChild(item);
@@ -59,19 +59,21 @@ document.addEventListener('DOMContentLoaded', function() {
 
     productFilter.addEventListener('input', filterAndSortLists);
 
-    form.addEventListener('submit', function() {
-        // Clear previous selections
-        Array.from(formProdukty.options).forEach(option => {
-            option.selected = false;
+    if (form) {
+        form.addEventListener('submit', function() {
+            // Clear previous selections
+            Array.from(formProdukty.options).forEach(option => {
+                option.selected = false;
+            });
+            // Select items in the selected products container
+            Array.from(selectedProductsContainer.children).forEach(item => {
+                const option = formProdukty.querySelector(`option[value="${item.dataset.value}"]`);
+                if (option) {
+                    option.selected = true;
+                }
+            });
         });
-        // Select items in the selected products container
-        Array.from(selectedProductsContainer.children).forEach(item => {
-            const option = formProdukty.querySelector(`option[value="${item.dataset.value}"]`);
-            if (option) {
-                option.selected = true;
-            }
-        });
-    });
+    }
 
     initialize();
 });
