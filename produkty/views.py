@@ -16,6 +16,7 @@ from django.db import models
 from django.http import HttpResponse, JsonResponse
 from django.contrib.auth.decorators import login_required
 from django.contrib.admin.views.decorators import staff_member_required
+from django.contrib.auth.models import User
 from openpyxl.styles import PatternFill, Font, Alignment, Border, Side
 from openpyxl.utils import get_column_letter
 from io import BytesIO
@@ -816,8 +817,10 @@ def zadanie_usun(request, zadanie_id):
     zadanie = get_object_or_404(Zadanie, id=zadanie_id)
     
     if request.method == 'POST':
+        month = zadanie.data_start.month
+        year = zadanie.data_start.year
         zadanie.delete()
-        return redirect('produkty:zadania_management')
+        return redirect('produkty:zadania_view', year=year, month=month)
     
     return render(request, 'produkty/zadanie_usun.html', {'zadanie': zadanie})
 
@@ -1248,3 +1251,32 @@ def product_edit(request, product_id):
         form = ProduktForm(instance=produkt)
     return render(request, 'produkty/product_edit.html', {'form': form})
 
+from .models import Funkcja, Podpowiedz
+
+@login_required
+def hub_wiedzy(request):
+    funkcje = Funkcja.objects.all().order_by('nazwa')
+    podpowiedzi = Podpowiedz.objects.all().order_by('tytul')
+    return render(request, 'produkty/hub_wiedzy.html', {'funkcje': funkcje, 'podpowiedzi': podpowiedzi})
+
+@login_required
+def funkcja_szczegoly(request, funkcja_id):
+    funkcja = get_object_or_404(Funkcja, id=funkcja_id)
+    produkty = funkcja.produkty.all().order_by('grupa_towarowa', 'model')
+    return render(request, 'produkty/funkcja_szczegoly.html', {'funkcja': funkcja, 'produkty': produkty})
+
+@login_required
+def podpowiedz_szczegoly(request, podpowiedz_id):
+    podpowiedz = get_object_or_404(Podpowiedz, id=podpowiedz_id)
+    return render(request, 'produkty/podpowiedz_szczegoly.html', {'podpowiedz': podpowiedz})
+
+@login_required
+def historia_sprzedazy_produktu(request, produkt_id):
+    produkt = get_object_or_404(Produkt, id=produkt_id)
+    sprzedaz_list = Sprzedaz.objects.filter(produkt=produkt).order_by('-data_sprzedazy')
+    suma_sztuk = sprzedaz_list.aggregate(total=Sum('liczba_sztuk'))['total'] or 0
+    return render(request, 'produkty/historia_sprzedazy_produktu.html', {
+        'produkt': produkt,
+        'sprzedaz_list': sprzedaz_list,
+        'suma_sztuk': suma_sztuk
+    })

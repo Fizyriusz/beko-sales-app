@@ -128,3 +128,18 @@ class GrafikPracy(models.Model):
 
     def __str__(self):
         return f"{self.user.username} - {self.data}"
+
+class Funkcja(models.Model):
+    nazwa = models.CharField(max_length=255)
+    opis = models.TextField(blank=True, null=True)
+    produkty = models.ManyToManyField(Produkt, related_name='funkcje', blank=True)
+
+    def __str__(self):
+        return self.nazwa
+
+class Podpowiedz(models.Model):
+    tytul = models.CharField(max_length=255)
+    tresc = models.TextField()
+
+    def __str__(self):
+        return self.tytul

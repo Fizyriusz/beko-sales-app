@@ -1,0 +1,23 @@
+{% extends 'produkty/base.html' %}
+
+{% block title %}{{ podpowiedz.tytul }}{% endblock %}
+
+{% block content %}
+<div class="container mt-4">
+    <div class="mb-3">
+        <a href="{% url 'produkty:hub_wiedzy' %}" class="btn btn-outline-secondary"><i class="fas fa-arrow-left"></i> Powrót do Hubu Wiedzy</a>
+    </div>
+
+    <div class="card shadow-sm mb-4">
+        <div class="card-header bg-success text-white">
+            <h3 class="mb-0"><i class="fas fa-book-open me-2"></i> {{ podpowiedz.tytul }}</h3>
+        </div>
+        <div class="card-body">
+            <!-- Wyświetlamy HTML zapisany w bazie dla tej podpowiedzi -->
+            <div class="podpowiedz-tresc mt-2" style="line-height: 1.6;">
+                {{ podpowiedz.tresc|safe }}
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

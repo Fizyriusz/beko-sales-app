@@ -1,0 +1,46 @@
+{% extends 'produkty/base.html' %}
+
+{% block title %}Historia Sprzedaży: {{ produkt.model }}{% endblock %}
+
+{% block content %}
+<div class="container mt-4">
+    <div class="mb-3">
+        <a href="{% url 'produkty:lista_produktow' %}" class="btn btn-outline-secondary"><i class="fas fa-arrow-left"></i> Powrót do Listy Produktów</a>
+    </div>
+
+    <div class="card shadow-sm mb-4">
+        <div class="card-header bg-primary text-white d-flex justify-content-between align-items-center">
+            <h3 class="mb-0">Historia sprzedaży: {{ produkt.model }} ({{ produkt.marka }})</h3>
+            <span class="badge bg-light text-dark fs-5">Zaraportowano łącznie: {{ suma_sztuk }} szt.</span>
+        </div>
+        <div class="card-body">
+            {% if sprzedaz_list %}
+            <div class="table-responsive">
+                <table class="table table-striped table-hover">
+                    <thead class="table-dark">
+                        <tr>
+                            <th>Data sprzedaży</th>
+                            <th>Ilość sztuk</th>
+                            <th>Zadanie</th>
+                            <th>Prowizja (za 1 szt.)</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for sprzedaz in sprzedaz_list %}
+                        <tr>
+                            <td>{{ sprzedaz.data_sprzedazy }}</td>
+                            <td><strong>{{ sprzedaz.liczba_sztuk }}</strong></td>
+                            <td>{% if sprzedaz.zadanie %}{{ sprzedaz.zadanie.nazwa }}{% else %}-{% endif %}</td>
+                            <td>{{ sprzedaz.prowizja }} PLN</td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+            {% else %}
+                <div class="alert alert-info">Brak zarejestrowanej sprzedaży dla tego modelu.</div>
+            {% endif %}
+        </div>
+    </div>
+</div>
+{% endblock %}

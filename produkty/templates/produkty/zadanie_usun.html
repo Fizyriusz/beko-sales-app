@@ -14,7 +14,7 @@
     <form method="post">
         {% csrf_token %}
         <button type="submit" class="btn btn-danger">Tak, usuń</button>
-        <a href="{% url 'produkty:zadania_management' %}" class="btn btn-secondary">Anuluj</a>
+        <a href="{% url 'produkty:zadania_view' year=zadanie.data_start.year month=zadanie.data_start.month %}" class="btn btn-secondary">Anuluj</a>
     </form>
 </div>
 {% endblock %} 

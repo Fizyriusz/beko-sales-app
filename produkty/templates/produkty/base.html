@@ -15,9 +15,14 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
 </head>
 <body>
-    <div class="header">
-        <button class="hamburger" onclick="toggleSidebar()">&#9776;</button>
-        <h1>Witaj w aplikacji sprzedażowej Beko!</h1>
+    <div class="header d-flex justify-content-between align-items-center w-100 pe-3">
+        <div class="d-flex align-items-center">
+            <button class="hamburger" onclick="toggleSidebar()">&#9776;</button>
+            <h1 class="mb-0 ms-2">Witaj w aplikacji sprzedażowej Beko!</h1>
+        </div>
+        {% if is_day_started %}
+        <span class="badge bg-success shadow-sm" style="font-size: 0.9rem;"><i class="fas fa-circle text-white me-1" style="font-size: 0.6rem; vertical-align: middle;"></i>Dzień Otwarty</span>
+        {% endif %}
     </div>
 
     <div class="overlay" id="overlay"></div>
@@ -56,6 +61,7 @@
                     <a href="#" class="submenu-toggle"><i class="fas fa-info-circle"></i> Inne <i class="fas fa-chevron-down float-end"></i></a>
                     <ul class="submenu">
                         <li><a href="{% url 'produkty:klienci' %}">Licznik klientów</a></li>
+                        <li><a href="{% url 'produkty:hub_wiedzy' %}">Hub Wiedzy</a></li>
                         {% if user.is_staff %}
                         <li><a href="{% url 'produkty:lista_produktow' %}">Lista produktów</a></li>
                         {% endif %}

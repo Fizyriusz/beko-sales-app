@@ -117,7 +117,11 @@
 
         <div class="mb-3">
             <button type="submit" class="btn btn-primary">Zapisz{% if not form.instance.pk %} ręcznie{% endif %}</button>
+            {% if form.instance.pk %}
+            <a href="{% url 'produkty:zadania_view' year=form.instance.data_start.year month=form.instance.data_start.month %}" class="btn btn-secondary">Anuluj</a>
+            {% else %}
             <a href="{% url 'produkty:zadania_management' %}" class="btn btn-secondary">Anuluj</a>
+            {% endif %}
         </div>
     </form>
 </div>

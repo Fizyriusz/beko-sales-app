@@ -67,6 +67,7 @@
                                         <td>{{ produkt.stawka }}</td>
                                         <td>
                                             <a href="{% url 'produkty:product_edit' produkt.id %}" class="btn btn-sm btn-warning">Edytuj</a>
+                                            <a href="{% url 'produkty:historia_sprzedazy_produktu' produkt.id %}" class="btn btn-sm btn-info text-white"><i class="fas fa-history"></i> Historia</a>
                                         </td>
                                     </tr>
                                     {% endfor %}
@@ -97,6 +98,7 @@
                     <td>{{ produkt.stawka }}</td>
                     <td>
                         <a href="{% url 'produkty:product_edit' produkt.id %}" class="btn btn-sm btn-warning">Edytuj</a>
+                        <a href="{% url 'produkty:historia_sprzedazy_produktu' produkt.id %}" class="btn btn-sm btn-info text-white"><i class="fas fa-history"></i> Historia</a>
                     </td>
                 </tr>
                 {% empty %}

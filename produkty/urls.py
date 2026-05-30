@@ -43,4 +43,12 @@ urlpatterns = [
     # Grafik
     path('grafik/', views.grafik_view, name='grafik'),
     path('grafik/import/', views.import_grafiku, name='import_grafiku'),
+
+    # Hub Wiedzy
+    path('hub-wiedzy/', views.hub_wiedzy, name='hub_wiedzy'),
+    path('hub-wiedzy/funkcja/<int:funkcja_id>/', views.funkcja_szczegoly, name='funkcja_szczegoly'),
+    path('hub-wiedzy/podpowiedz/<int:podpowiedz_id>/', views.podpowiedz_szczegoly, name='podpowiedz_szczegoly'),
+    
+    # Historia Sprzedazy
+    path('produkt/<int:produkt_id>/historia/', views.historia_sprzedazy_produktu, name='historia_sprzedazy_produktu'),
 ]

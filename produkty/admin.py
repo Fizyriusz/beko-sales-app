@@ -37,3 +37,12 @@ class GrafikPracyAdmin(admin.ModelAdmin):
 
 admin.site.register(DzienPracy)
 admin.site.register(OdpowiedzChecklisty)
+
+from .models import Funkcja, Podpowiedz
+
+@admin.register(Funkcja)
+class FunkcjaAdmin(admin.ModelAdmin):
+    list_display = ('nazwa',)
+    filter_horizontal = ('produkty',)
+
+admin.site.register(Podpowiedz)
