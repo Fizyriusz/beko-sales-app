@@ -208,6 +208,7 @@ body.sidebar-open .header {
         margin-left: 280px;
     }
     .header {
+        display: flex !important;
         left: 280px;
         width: calc(100% - 280px);
     }
