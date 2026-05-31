@@ -9,21 +9,46 @@ body {
 .header {
     background-color: #ffffff;
     color: #333;
-    padding: 15px 30px;
+    padding: 15px 20px;
     width: 100%;
     position: fixed;
     top: 0;
+    left: 0;
     z-index: 1000;
     box-shadow: 0 2px 5px rgba(0,0,0,0.1);
     display: flex;
     align-items: center;
+    transition: left 0.3s ease, width 0.3s ease;
 }
 
-.header h1 {
+body.sidebar-open .header {
+    left: 280px;
+    width: calc(100% - 280px);
+}
+
+.header h1, .header-title {
     margin: 0;
-    font-size: 24px;
+    font-size: 18px;
+    font-weight: 600;
+    color: #002450;
     flex-grow: 1;
     text-align: center;
+}
+
+@media (min-width: 768px) {
+    .header h1, .header-title {
+        font-size: 22px;
+    }
+}
+
+.user-greeting {
+    background-color: #f0f4f8;
+    padding: 6px 12px;
+    border-radius: 20px;
+    font-size: 14px;
+    color: #333;
+    font-weight: 500;
+    box-shadow: 0 1px 3px rgba(0,0,0,0.05);
 }
 
 .hamburger {
@@ -183,6 +208,10 @@ body {
         margin-left: 280px;
     }
     .header {
+        left: 280px;
+        width: calc(100% - 280px);
+    }
+    .hamburger {
         display: none;
     }
     .overlay {

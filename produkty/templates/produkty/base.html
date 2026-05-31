@@ -25,13 +25,21 @@
 <body class="{% if not user.is_authenticated %}no-sidebar{% endif %}">
     {% if user.is_authenticated %}
     <div class="header d-flex justify-content-between align-items-center w-100 pe-3">
-        <div class="d-flex align-items-center">
+        <div class="d-flex align-items-center flex-grow-1 min-w-0">
             <button class="hamburger" onclick="toggleSidebar()">&#9776;</button>
-            <h1 class="mb-0 ms-2">Witaj w aplikacji sprzedażowej Beko!</h1>
+            <h1 class="mb-0 ms-2 header-title text-truncate">Witaj w aplikacji sprzedażowej Beko!</h1>
         </div>
-        {% if is_day_started %}
-        <span class="badge bg-success shadow-sm" style="font-size: 0.9rem;"><i class="fas fa-circle text-white me-1" style="font-size: 0.6rem; vertical-align: middle;"></i>Dzień Otwarty</span>
-        {% endif %}
+        <div class="d-flex align-items-center gap-2 flex-shrink-0">
+            {% if is_day_started %}
+            <span class="badge bg-success shadow-sm d-none d-md-inline-block" style="font-size: 0.9rem;"><i class="fas fa-circle text-white me-1" style="font-size: 0.6rem; vertical-align: middle;"></i>Dzień Otwarty</span>
+            <span class="badge bg-success shadow-sm d-md-none" title="Dzień Otwarty"><i class="fas fa-circle text-white"></i></span>
+            {% endif %}
+            <span class="user-greeting ms-2">
+                <i class="fas fa-user-circle text-primary fs-5 me-1 align-middle"></i>
+                <span class="d-none d-sm-inline align-middle">Witaj, </span>
+                <strong class="align-middle">{% if user.first_name %}{{ user.first_name }}{% else %}{{ user.username }}{% endif %}</strong>
+            </span>
+        </div>
     </div>
 
     <div class="overlay" id="overlay"></div>
@@ -126,6 +134,7 @@
             if (sidebar && overlay) {
                 sidebar.classList.toggle('open');
                 overlay.classList.toggle('active');
+                document.body.classList.toggle('sidebar-open');
             }
         }
 
