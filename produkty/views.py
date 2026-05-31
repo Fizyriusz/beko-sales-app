@@ -1468,8 +1468,14 @@ import json
 from collections import defaultdict
 from django.http import JsonResponse
 
+def ensure_default_subgroups():
+    grupy_bez_subgrup = TopGroup.objects.filter(subgrupy__isnull=True)
+    for grupa in grupy_bez_subgrup:
+        TopSubGroup.objects.create(grupa=grupa, nazwa=grupa.nazwa, kolejnosc=0)
+
 @login_required
 def top_lista(request):
+    ensure_default_subgroups()
     aktywne_grupy = TopGroup.objects.filter(aktywna=True).prefetch_related('subgrupy')
     wszystkie_modele = list(Produkt.objects.values_list('model', flat=True))
     
@@ -1514,6 +1520,7 @@ def top_lista_zapisz(request, subgrupa_id):
 
 @staff_member_required
 def top_lista_manage(request):
+    ensure_default_subgroups()
     grupy = TopGroup.objects.all().prefetch_related('subgrupy')
     return render(request, 'produkty/top_lista_manage.html', {'grupy': grupy})
 

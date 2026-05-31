@@ -167,7 +167,8 @@
         btn.disabled = true;
 
         try {
-            const res = await fetch(`/top-lista/zapisz/${subId}/`, {
+            const url = "{% url 'produkty:top_lista_zapisz' 0 %}".replace('0', subId);
+            const res = await fetch(url, {
                 method: 'POST',
                 headers: {
                     'Content-Type': 'application/json',
@@ -184,9 +185,18 @@
                     btn.disabled = false;
                 }, 2000);
             } else {
-                throw new Error('Server error');
+                let errorMsg = 'Błąd serwera';
+                try {
+                    const jsonRes = await res.json();
+                    if (jsonRes && jsonRes.msg) {
+                        errorMsg = jsonRes.msg;
+                    }
+                } catch (jsonErr) {}
+                throw new Error(errorMsg);
             }
         } catch (e) {
+            console.error('Save error:', e);
+            alert('Błąd zapisu: ' + e.message);
             btn.innerHTML = '<i class="fas fa-times"></i> Błąd zapisu';
             btn.classList.replace('btn-primary', 'btn-danger');
             setTimeout(() => {
