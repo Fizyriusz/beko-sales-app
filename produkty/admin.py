@@ -46,3 +46,8 @@ class FunkcjaAdmin(admin.ModelAdmin):
     filter_horizontal = ('produkty',)
 
 admin.site.register(Podpowiedz)
+
+from .models import TopGroup, TopSubGroup, TopListEntry
+admin.site.register(TopGroup)
+admin.site.register(TopSubGroup)
+admin.site.register(TopListEntry)

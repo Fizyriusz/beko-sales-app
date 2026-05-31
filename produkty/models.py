@@ -143,3 +143,38 @@ class Podpowiedz(models.Model):
 
     def __str__(self):
         return self.tytul
+
+class TopGroup(models.Model):
+    nazwa = models.CharField(max_length=150, verbose_name="Nazwa grupy")
+    aktywna = models.BooleanField(default=True, verbose_name="Aktywna")
+    kolejnosc = models.IntegerField(default=0, verbose_name="Kolejność")
+
+    class Meta:
+        ordering = ['kolejnosc', 'nazwa']
+
+    def __str__(self):
+        return self.nazwa
+
+class TopSubGroup(models.Model):
+    grupa = models.ForeignKey(TopGroup, on_delete=models.CASCADE, related_name='subgrupy')
+    nazwa = models.CharField(max_length=150, verbose_name="Nazwa podgrupy")
+    kolejnosc = models.IntegerField(default=0, verbose_name="Kolejność")
+
+    class Meta:
+        ordering = ['kolejnosc', 'nazwa']
+
+    def __str__(self):
+        return f"{self.grupa.nazwa} - {self.nazwa}"
+
+class TopListEntry(models.Model):
+    user = models.ForeignKey(User, on_delete=models.CASCADE, related_name='top_listy')
+    subgrupa = models.ForeignKey(TopSubGroup, on_delete=models.CASCADE, related_name='wpisy')
+    pozycja = models.PositiveIntegerField(verbose_name="Pozycja")
+    model_tekst = models.CharField(max_length=150, verbose_name="Model")
+
+    class Meta:
+        ordering = ['pozycja']
+        unique_together = ('user', 'subgrupa', 'pozycja')
+
+    def __str__(self):
+        return f"{self.user.username} - {self.subgrupa} - #{self.pozycja}: {self.model_tekst}"

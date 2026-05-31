@@ -1,0 +1,76 @@
+{% extends 'produkty/base.html' %}
+
+{% block title %}Zarządzanie Grupami TOP{% endblock %}
+
+{% block content %}
+<div class="container mt-4">
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <h2>Zarządzanie Grupami TOP</h2>
+        <a href="{% url 'produkty:top_lista' %}" class="btn btn-secondary">Wróć do listy TOP</a>
+    </div>
+
+    <div class="card mb-4 shadow-sm">
+        <div class="card-header bg-primary text-white">
+            <h5 class="mb-0">Dodaj nową Grupę</h5>
+        </div>
+        <div class="card-body">
+            <form action="{% url 'produkty:top_lista_group_add' %}" method="post" class="d-flex gap-3 align-items-end">
+                {% csrf_token %}
+                <div class="flex-grow-1">
+                    <label class="form-label">Nazwa grupy (np. Zmywarki wolnostojące)</label>
+                    <input type="text" name="nazwa" class="form-control" required>
+                </div>
+                <div style="width: 100px;">
+                    <label class="form-label">Kolejność</label>
+                    <input type="number" name="kolejnosc" class="form-control" value="0">
+                </div>
+                <button type="submit" class="btn btn-success"><i class="fas fa-plus"></i> Dodaj</button>
+            </form>
+        </div>
+    </div>
+
+    {% for grupa in grupy %}
+    <div class="card mb-4 shadow-sm border-info">
+        <div class="card-header bg-info text-dark d-flex justify-content-between align-items-center">
+            <h5 class="mb-0"><strong>{{ grupa.nazwa }}</strong> <small class="text-muted">(Kolejność: {{ grupa.kolejnosc }})</small></h5>
+            <form action="{% url 'produkty:top_lista_delete_group' grupa.id %}" method="post" onsubmit="return confirm('Na pewno usunąć całą grupę?');">
+                {% csrf_token %}
+                <button type="submit" class="btn btn-sm btn-danger"><i class="fas fa-trash"></i> Usuń</button>
+            </form>
+        </div>
+        <div class="card-body">
+            <h6>Podgrupy w tej grupie:</h6>
+            <ul class="list-group mb-3">
+                {% for subgrupa in grupa.subgrupy.all %}
+                <li class="list-group-item d-flex justify-content-between align-items-center">
+                    <span><strong>{{ subgrupa.nazwa }}</strong> <small class="text-muted">(Kolejność: {{ subgrupa.kolejnosc }})</small></span>
+                    <form action="{% url 'produkty:top_lista_delete_subgroup' subgrupa.id %}" method="post" class="m-0" onsubmit="return confirm('Na pewno usunąć podgrupę?');">
+                        {% csrf_token %}
+                        <button type="submit" class="btn btn-sm btn-outline-danger"><i class="fas fa-times"></i> Usuń</button>
+                    </form>
+                </li>
+                {% empty %}
+                <li class="list-group-item text-muted">Brak podgrup. Dodaj pierwszą podgrupę poniżej.</li>
+                {% endfor %}
+            </ul>
+
+            <form action="{% url 'produkty:top_lista_subgroup_add' %}" method="post" class="d-flex gap-3 align-items-end mt-2 bg-light p-3 rounded">
+                {% csrf_token %}
+                <input type="hidden" name="grupa_id" value="{{ grupa.id }}">
+                <div class="flex-grow-1">
+                    <label class="form-label text-sm">Nazwa nowej podgrupy (np. FS Inox)</label>
+                    <input type="text" name="nazwa" class="form-control form-control-sm" required>
+                </div>
+                <div style="width: 80px;">
+                    <label class="form-label text-sm">Kolejność</label>
+                    <input type="number" name="kolejnosc" class="form-control form-control-sm" value="0">
+                </div>
+                <button type="submit" class="btn btn-sm btn-primary"><i class="fas fa-plus"></i> Dodaj podgrupę</button>
+            </form>
+        </div>
+    </div>
+    {% empty %}
+    <div class="alert alert-info">Brak utworzonych grup TOP.</div>
+    {% endfor %}
+</div>
+{% endblock %}

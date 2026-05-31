@@ -1,5 +1,6 @@
 from django.shortcuts import render, redirect, get_object_or_404
-from .models import Produkt, Sprzedaz, Zadanie, Ekspozycja, GrupaProduktowa, Marka, KlientCounter, DzienPracy, GrafikPracy, PunktChecklisty, OdpowiedzChecklisty
+from django.contrib import messages
+from .models import Produkt, Sprzedaz, Zadanie, Ekspozycja, GrupaProduktowa, Marka, KlientCounter, DzienPracy, GrafikPracy, PunktChecklisty, OdpowiedzChecklisty, TopGroup, TopSubGroup, TopListEntry
 from .forms import ZadanieForm, ProduktForm
 import openpyxl
 from openpyxl.utils.exceptions import InvalidFileException
@@ -852,6 +853,32 @@ def szczegoly_zadania(request, zadanie_id):
         ilosc=Sum('liczba_sztuk')
     ).order_by('-ilosc')
 
+    # Analiza historyczna
+    days = request.GET.get('days', '90')
+    if days not in ['30', '60', '90']:
+        days = '90'
+    days_int = int(days)
+    
+    from datetime import datetime, timedelta
+    today_date = datetime.now().date()
+    start_date_hist = today_date - timedelta(days=days_int)
+    
+    historyczne_sprzedaze = Sprzedaz.objects.filter(
+        produkt__in=modele_w_zadaniu,
+        data_sprzedazy__range=(start_date_hist, today_date)
+    ).values('produkt').annotate(ilosc=Sum('liczba_sztuk'))
+    
+    historia_dict = {item['produkt']: item['ilosc'] for item in historyczne_sprzedaze}
+    
+    analiza_dane = []
+    for prod in modele_w_zadaniu:
+        sztuk = historia_dict.get(prod.id, 0)
+        analiza_dane.append({
+            'produkt': prod,
+            'sztuk': sztuk
+        })
+    analiza_dane.sort(key=lambda x: x['sztuk'], reverse=True)
+
     context = {
         'zadanie': zadanie,
         'postep': postep,
@@ -859,6 +886,8 @@ def szczegoly_zadania(request, zadanie_id):
         'modele_w_zadaniu': modele_w_zadaniu,
         'prog_1_status': prog_1_status,
         'prog_2_status': prog_2_status,
+        'analiza_dane': analiza_dane,
+        'selected_days': days_int,
     }
 
     return render(request, 'produkty/szczegoly_zadania.html', context)
@@ -1434,3 +1463,92 @@ def podpowiedz_edytuj(request, podpowiedz_id):
     else:
         form = PodpowiedzForm(instance=podpowiedz)
     return render(request, 'produkty/formularz_wiedzy.html', {'form': form, 'akcja': 'Edytuj', 'typ': 'Podpowiedź'})
+
+import json
+from collections import defaultdict
+from django.http import JsonResponse
+
+@login_required
+def top_lista(request):
+    aktywne_grupy = TopGroup.objects.filter(aktywna=True).prefetch_related('subgrupy')
+    wszystkie_modele = list(Produkt.objects.values_list('model', flat=True))
+    
+    # Przekazujemy wszystkie wpisy dla bieżącego użytkownika jako słownik {subgrupa_id: [wpisy]}
+    wpisy_usera = TopListEntry.objects.filter(user=request.user).order_by('pozycja')
+    wpisy_dict = defaultdict(list)
+    for wpis in wpisy_usera:
+        wpisy_dict[wpis.subgrupa_id].append({'pozycja': wpis.pozycja, 'model_tekst': wpis.model_tekst})
+        
+    return render(request, 'produkty/top_lista.html', {
+        'aktywne_grupy': aktywne_grupy,
+        'all_models_json': json.dumps(wszystkie_modele),
+        'wpisy_dict': json.dumps(dict(wpisy_dict))
+    })
+
+@login_required
+def top_lista_zapisz(request, subgrupa_id):
+    if request.method == 'POST':
+        subgrupa = get_object_or_404(TopSubGroup, id=subgrupa_id)
+        # Parse JSON z requesta (spodziewamy się [{pozycja: 1, model: "X"}, ...])
+        try:
+            dane = json.loads(request.body)
+            # Kasujemy stare wpisy dla tej podgrupy i usera
+            TopListEntry.objects.filter(user=request.user, subgrupa=subgrupa).delete()
+            # Tworzymy nowe
+            nowe_wpisy = []
+            for item in dane:
+                model = item.get('model', '').strip().upper()
+                pozycja = item.get('pozycja')
+                if model and pozycja:
+                    nowe_wpisy.append(TopListEntry(
+                        user=request.user,
+                        subgrupa=subgrupa,
+                        pozycja=pozycja,
+                        model_tekst=model
+                    ))
+            TopListEntry.objects.bulk_create(nowe_wpisy)
+            return JsonResponse({'status': 'success'})
+        except Exception as e:
+            return JsonResponse({'status': 'error', 'msg': str(e)}, status=400)
+    return JsonResponse({'status': 'error', 'msg': 'Invalid method'}, status=405)
+
+@staff_member_required
+def top_lista_manage(request):
+    grupy = TopGroup.objects.all().prefetch_related('subgrupy')
+    return render(request, 'produkty/top_lista_manage.html', {'grupy': grupy})
+
+@staff_member_required
+def top_lista_group_add(request):
+    if request.method == 'POST':
+        nazwa = request.POST.get('nazwa', '').strip()
+        kolejnosc = request.POST.get('kolejnosc', 0)
+        if nazwa:
+            TopGroup.objects.create(nazwa=nazwa, kolejnosc=kolejnosc)
+            messages.success(request, 'Dodano grupę TOP.')
+    return redirect('produkty:top_lista_manage')
+
+@staff_member_required
+def top_lista_subgroup_add(request):
+    if request.method == 'POST':
+        grupa_id = request.POST.get('grupa_id')
+        nazwa = request.POST.get('nazwa', '').strip()
+        kolejnosc = request.POST.get('kolejnosc', 0)
+        if grupa_id and nazwa:
+            grupa = get_object_or_404(TopGroup, id=grupa_id)
+            TopSubGroup.objects.create(grupa=grupa, nazwa=nazwa, kolejnosc=kolejnosc)
+            messages.success(request, 'Dodano podgrupę TOP.')
+    return redirect('produkty:top_lista_manage')
+
+@staff_member_required
+def top_lista_delete_group(request, group_id):
+    grupa = get_object_or_404(TopGroup, id=group_id)
+    grupa.delete()
+    messages.success(request, 'Usunięto grupę.')
+    return redirect('produkty:top_lista_manage')
+
+@staff_member_required
+def top_lista_delete_subgroup(request, subgroup_id):
+    subgrupa = get_object_or_404(TopSubGroup, id=subgroup_id)
+    subgrupa.delete()
+    messages.success(request, 'Usunięto podgrupę.')
+    return redirect('produkty:top_lista_manage')

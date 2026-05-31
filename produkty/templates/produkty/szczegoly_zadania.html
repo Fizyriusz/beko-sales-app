@@ -60,16 +60,45 @@
                     {% endif %}
                 </div>
                 <div class="col-md-6">
-                    <h4>Modele objęte zadaniem</h4>
-                     <ul class="list-group">
-                        {% for model in modele_w_zadaniu %}
-                            <li class="list-group-item">{{ model.model }} - {{ model.marka }}</li>
-                        {% endfor %}
-                    </ul>
+                    <div class="d-flex justify-content-between align-items-center mb-2">
+                        <h4 class="mb-0">Rekomendacje (Analiza historyczna)</h4>
+                        <form method="get" class="d-flex align-items-center gap-2">
+                            <label class="small text-muted mb-0">Okres:</label>
+                            <select name="days" class="form-select form-select-sm" style="width: auto;" onchange="this.form.submit()">
+                                <option value="30" {% if selected_days == 30 %}selected{% endif %}>Ostatnie 30 dni</option>
+                                <option value="60" {% if selected_days == 60 %}selected{% endif %}>Ostatnie 60 dni</option>
+                                <option value="90" {% if selected_days == 90 %}selected{% endif %}>Ostatnie 90 dni</option>
+                            </select>
+                        </form>
+                    </div>
+                    <p class="small text-muted mb-2">Poniżej znajdziesz modele z zadania, posegregowane od najlepiej sprzedających się u Ciebie w wybranym okresie. Zacznij sprzedaż od tych modeli, by najszybciej zrealizować cel!</p>
+                    
+                    {% if analiza_dane %}
+                    <table class="table table-bordered table-sm mt-3">
+                        <thead class="table-light">
+                            <tr>
+                                <th>Model z zadania</th>
+                                <th>Sprzedaż (ost. {{ selected_days }} dni)</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for item in analiza_dane %}
+                            <tr class="{% if forloop.counter <= 3 %}table-success{% endif %}">
+                                <td><strong>{{ item.produkt.model }}</strong> ({{ item.produkt.marka }})</td>
+                                <td class="text-center"><strong>{{ item.sztuk }}</strong> szt.</td>
+                            </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                    {% else %}
+                    <p>Brak danych historycznych dla modeli w tym zadaniu.</p>
+                    {% endif %}
                 </div>
             </div>
             
-            <a href="{% url 'produkty:zadania_view' year=zadanie.data_start.year month=zadanie.data_start.month %}" class="btn btn-primary mt-3">Powrót do listy zadań</a>
+            <hr>
+
+            <a href="{% url 'produkty:zadania_view' zadanie.data_start.year zadanie.data_start.month %}" class="btn btn-secondary mt-3">Powrót do zadań</a>
         </div>
     </div>
 </div>

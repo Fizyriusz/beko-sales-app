@@ -453,3 +453,49 @@ body {
 .filter-form button:hover {
     background-color: #16a085;
 }
+
+/* TOP List Autocomplete */
+.autocomplete-suggestions {
+    position: absolute;
+    top: 100%;
+    left: 0;
+    right: 0;
+    background: #ffffff;
+    border: 1px solid #ced4da;
+    border-radius: 4px;
+    z-index: 1000;
+    max-height: 200px;
+    overflow-y: auto;
+    box-shadow: 0 4px 6px rgba(0,0,0,0.1);
+}
+.autocomplete-suggestion {
+    padding: 8px 12px;
+    cursor: pointer;
+    font-size: 14px;
+}
+.autocomplete-suggestion:hover, .autocomplete-suggestion.active {
+    background-color: #3498db;
+    color: #ffffff;
+}
+
+/* TOP List Custom Styles */
+.position-number {
+    display: inline-block;
+    text-align: right;
+    font-size: 1.1rem;
+    color: #6c757d;
+}
+.btn-move-up, .btn-move-down {
+    background-color: #f8f9fa;
+    color: #6c757d;
+}
+.btn-move-up:hover, .btn-move-down:hover {
+    background-color: #e2e6ea;
+}
+.subgroup-container {
+    transition: transform 0.2s, box-shadow 0.2s;
+}
+.subgroup-container:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 .5rem 1rem rgba(0,0,0,.15)!important;
+}

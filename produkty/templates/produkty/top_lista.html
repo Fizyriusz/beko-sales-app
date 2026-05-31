@@ -1,0 +1,332 @@
+{% extends 'produkty/base.html' %}
+{% load static %}
+
+{% block title %}Lista TOP{% endblock %}
+
+{% block extra_js %}
+<script>
+    const ALL_MODELS = {{ all_models_json|safe }};
+    const WPISY_USERA = {{ wpisy_dict|safe }};
+
+    document.addEventListener('DOMContentLoaded', function() {
+        // Render initial data
+        document.querySelectorAll('.subgroup-container').forEach(container => {
+            const subId = container.dataset.subid;
+            const wpisy = WPISY_USERA[subId] || [];
+            
+            if (wpisy.length > 0) {
+                // Populate existing entries
+                wpisy.forEach(wpis => {
+                    addPositionToSubgroup(container, wpis.model_tekst);
+                });
+            } else {
+                // Default 5 spots
+                for (let i = 0; i < 5; i++) {
+                    addPositionToSubgroup(container, '');
+                }
+            }
+            updatePositions(container);
+        });
+
+        // Initialize autocompletes
+        document.addEventListener('input', function(e) {
+            if (e.target.classList.contains('model-autocomplete')) {
+                showAutocomplete(e.target);
+            }
+        });
+
+        // Close autocomplete when clicking outside
+        document.addEventListener('click', function(e) {
+            if (!e.target.classList.contains('model-autocomplete')) {
+                document.querySelectorAll('.autocomplete-suggestions').forEach(el => el.remove());
+            }
+        });
+    });
+
+    function showAutocomplete(input) {
+        let val = input.value.toUpperCase();
+        // Remove existing
+        let existing = input.parentNode.querySelector('.autocomplete-suggestions');
+        if (existing) existing.remove();
+        
+        if (!val) return;
+
+        let matches = ALL_MODELS.filter(m => m.includes(val)).slice(0, 10);
+        if (matches.length === 0) return;
+
+        let suggestions = document.createElement('div');
+        suggestions.className = 'autocomplete-suggestions';
+        
+        matches.forEach(match => {
+            let item = document.createElement('div');
+            item.className = 'autocomplete-suggestion';
+            item.innerHTML = match.replace(new RegExp(val, "gi"), "<strong>$&</strong>");
+            item.addEventListener('click', function() {
+                input.value = match;
+                suggestions.remove();
+            });
+            suggestions.appendChild(item);
+        });
+        
+        input.parentNode.appendChild(suggestions);
+    }
+
+    function addPositionToSubgroup(container, value = '') {
+        const list = container.querySelector('.positions-list');
+        const item = document.createElement('div');
+        item.className = 'd-flex gap-2 align-items-center mb-2 position-item';
+        item.innerHTML = `
+            <span class="position-number fw-bold text-muted" style="width: 25px;"></span>
+            <div class="position-relative flex-grow-1">
+                <input type="text" class="form-control model-autocomplete" value="${value}" placeholder="Wpisz model...">
+            </div>
+            <button type="button" class="btn btn-sm btn-light border btn-move-up" onclick="moveUp(this)"><i class="fas fa-arrow-up"></i></button>
+            <button type="button" class="btn btn-sm btn-light border btn-move-down" onclick="moveDown(this)"><i class="fas fa-arrow-down"></i></button>
+            <button type="button" class="btn btn-sm btn-outline-danger" onclick="removePosition(this)"><i class="fas fa-times"></i></button>
+        `;
+        list.appendChild(item);
+        updatePositions(container);
+    }
+
+    function removePosition(btn) {
+        const container = btn.closest('.subgroup-container');
+        btn.closest('.position-item').remove();
+        updatePositions(container);
+    }
+
+    function moveUp(btn) {
+        const item = btn.closest('.position-item');
+        const prev = item.previousElementSibling;
+        if (prev) {
+            item.parentNode.insertBefore(item, prev);
+            updatePositions(item.closest('.subgroup-container'));
+        }
+    }
+
+    function moveDown(btn) {
+        const item = btn.closest('.position-item');
+        const next = item.nextElementSibling;
+        if (next) {
+            item.parentNode.insertBefore(next, item);
+            updatePositions(item.closest('.subgroup-container'));
+        }
+    }
+
+    function updatePositions(container) {
+        const items = container.querySelectorAll('.position-item');
+        items.forEach((item, index) => {
+            item.querySelector('.position-number').textContent = (index + 1) + '.';
+        });
+    }
+
+    function toggleImport(subId) {
+        const el = document.getElementById('import-area-' + subId);
+        el.style.display = el.style.display === 'none' ? 'block' : 'none';
+    }
+
+    function parseImport(subId) {
+        const text = document.getElementById('import-text-' + subId).value;
+        const container = document.getElementById('subgroup-' + subId);
+        const list = container.querySelector('.positions-list');
+        
+        // Match numbers at the start of line
+        const regex = /^\s*\d+[\.\)\-]?\s+(.+)$/gm;
+        let match;
+        const newModels = [];
+        while ((match = regex.exec(text)) !== null) {
+            if (match[1].trim()) newModels.push(match[1].trim());
+        }
+
+        if (newModels.length > 0) {
+            list.innerHTML = ''; // Clear existing
+            newModels.forEach(m => addPositionToSubgroup(container, m));
+            document.getElementById('import-text-' + subId).value = '';
+            toggleImport(subId);
+            
+            // Auto save
+            saveSubgroup(subId);
+        } else {
+            alert('Nie wykryto żadnych modeli w formacie np. "1. MODEL".');
+        }
+    }
+
+    async function saveSubgroup(subId) {
+        const container = document.getElementById('subgroup-' + subId);
+        const inputs = container.querySelectorAll('.model-autocomplete');
+        const data = [];
+        inputs.forEach((input, index) => {
+            const val = input.value.trim();
+            if (val) {
+                data.push({ pozycja: index + 1, model: val });
+            }
+        });
+
+        const btn = container.querySelector('.btn-save');
+        const originalText = btn.innerHTML;
+        btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Zapisywanie...';
+        btn.disabled = true;
+
+        try {
+            const res = await fetch(`/top-lista/zapisz/${subId}/`, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'X-CSRFToken': '{{ csrf_token }}'
+                },
+                body: JSON.stringify(data)
+            });
+            if (res.ok) {
+                btn.innerHTML = '<i class="fas fa-check"></i> Zapisano';
+                btn.classList.replace('btn-primary', 'btn-success');
+                setTimeout(() => {
+                    btn.innerHTML = originalText;
+                    btn.classList.replace('btn-success', 'btn-primary');
+                    btn.disabled = false;
+                }, 2000);
+            } else {
+                throw new Error('Server error');
+            }
+        } catch (e) {
+            btn.innerHTML = '<i class="fas fa-times"></i> Błąd zapisu';
+            btn.classList.replace('btn-primary', 'btn-danger');
+            setTimeout(() => {
+                btn.innerHTML = originalText;
+                btn.classList.replace('btn-danger', 'btn-primary');
+                btn.disabled = false;
+            }, 3000);
+        }
+    }
+
+    function generateSubgroupText(subId, subName) {
+        const container = document.getElementById('subgroup-' + subId);
+        const inputs = container.querySelectorAll('.model-autocomplete');
+        let text = `# ${subName} #\n`;
+        let hasItems = false;
+        inputs.forEach((input, index) => {
+            const val = input.value.trim();
+            if (val) {
+                text += `${index + 1}. ${val}\n`;
+                hasItems = true;
+            }
+        });
+        return hasItems ? text : '';
+    }
+
+    function copySubgroup(subId, subName, btn) {
+        const text = generateSubgroupText(subId, subName);
+        if (!text) {
+            alert('Podgrupa jest pusta!');
+            return;
+        }
+        navigator.clipboard.writeText(text).then(() => {
+            const orig = btn.innerHTML;
+            btn.innerHTML = '<i class="fas fa-check"></i> Skopiowano';
+            setTimeout(() => { btn.innerHTML = orig; }, 2000);
+        });
+    }
+
+    function copyGroup(groupId, groupName, btn) {
+        const groupEl = document.getElementById('group-' + groupId);
+        const subContainers = groupEl.querySelectorAll('.subgroup-container');
+        
+        let fullText = `GRUPA - ${groupName}\n`;
+        let hasContent = false;
+        
+        subContainers.forEach(container => {
+            const subId = container.dataset.subid;
+            const subName = container.dataset.subname;
+            const text = generateSubgroupText(subId, subName);
+            if (text) {
+                fullText += text + '\n';
+                hasContent = true;
+            }
+        });
+
+        if (!hasContent) {
+            alert('Wszystkie podgrupy są puste!');
+            return;
+        }
+
+        navigator.clipboard.writeText(fullText.trim()).then(() => {
+            const orig = btn.innerHTML;
+            btn.innerHTML = '<i class="fas fa-check"></i> Skopiowano';
+            setTimeout(() => { btn.innerHTML = orig; }, 2000);
+        });
+    }
+</script>
+{% endblock %}
+
+{% block content %}
+<div class="container mt-4 mb-5">
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <h2>Lista TOP - Ekspozycja</h2>
+        {% if user.is_staff %}
+        <a href="{% url 'produkty:top_lista_manage' %}" class="btn btn-outline-primary"><i class="fas fa-cog"></i> Zarządzaj grupami</a>
+        {% endif %}
+    </div>
+    
+    <p class="text-muted mb-4">
+        Wypełnij swoje listy TOP. Dane zapisywane są tylko dla Twojego konta. Użyj przycisku kopiowania, aby szybko wkleić je do głównej aplikacji zadaniowej!
+    </p>
+
+    {% for grupa in aktywne_grupy %}
+    <div class="card mb-5 shadow-sm border-0" id="group-{{ grupa.id }}" style="border-radius: 12px; overflow: hidden;">
+        <div class="card-header bg-dark text-white d-flex justify-content-between align-items-center py-3">
+            <h4 class="mb-0 fw-bold">{{ grupa.nazwa }}</h4>
+            <button class="btn btn-sm btn-light fw-bold shadow-sm" onclick="copyGroup({{ grupa.id }}, '{{ grupa.nazwa|escapejs }}', this)">
+                <i class="fas fa-copy text-primary"></i> Kopiuj całą grupę
+            </button>
+        </div>
+        <div class="card-body bg-light">
+            
+            <div class="row">
+                {% for subgrupa in grupa.subgrupy.all %}
+                <div class="col-md-6 mb-4">
+                    <div class="card h-100 shadow-sm border-0 subgroup-container" id="subgroup-{{ subgrupa.id }}" data-subid="{{ subgrupa.id }}" data-subname="{{ subgrupa.nazwa }}">
+                        <div class="card-header bg-white border-bottom-0 pt-3 pb-0 d-flex justify-content-between align-items-center">
+                            <h5 class="fw-bold text-primary mb-0"><span class="text-muted">#</span> {{ subgrupa.nazwa }} <span class="text-muted">#</span></h5>
+                            <button class="btn btn-sm btn-outline-secondary" onclick="copySubgroup({{ subgrupa.id }}, '{{ subgrupa.nazwa|escapejs }}', this)">
+                                <i class="fas fa-copy"></i> Kopiuj
+                            </button>
+                        </div>
+                        <div class="card-body">
+                            
+                            <div class="positions-list mb-3">
+                                <!-- JS will populate inputs here -->
+                            </div>
+                            
+                            <div class="d-flex gap-2 mb-3">
+                                <button type="button" class="btn btn-sm btn-outline-primary" onclick="addPositionToSubgroup(document.getElementById('subgroup-{{ subgrupa.id }}'))">
+                                    <i class="fas fa-plus"></i> Dodaj pozycję
+                                </button>
+                                <button type="button" class="btn btn-sm btn-outline-secondary" onclick="toggleImport({{ subgrupa.id }})">
+                                    <i class="fas fa-paste"></i> Wklej z notatek
+                                </button>
+                            </div>
+
+                            <!-- Import area hidden by default -->
+                            <div id="import-area-{{ subgrupa.id }}" class="mb-3" style="display: none;">
+                                <textarea id="import-text-{{ subgrupa.id }}" class="form-control mb-2" rows="4" placeholder="Wklej skopiowaną listę (np. 1. BEKO X...)"></textarea>
+                                <button class="btn btn-sm btn-success w-100" onclick="parseImport({{ subgrupa.id }})">Zaimportuj listę</button>
+                            </div>
+
+                            <button class="btn btn-primary w-100 btn-save fw-bold shadow-sm" onclick="saveSubgroup({{ subgrupa.id }})">
+                                <i class="fas fa-save"></i> Zapisz układ
+                            </button>
+                        </div>
+                    </div>
+                </div>
+                {% empty %}
+                <div class="col-12">
+                    <div class="alert alert-warning">Brak zdefiniowanych podgrup dla tej kategorii. {% if user.is_staff %}Skonfiguruj je w panelu zarządzania.{% endif %}</div>
+                </div>
+                {% endfor %}
+            </div>
+
+        </div>
+    </div>
+    {% empty %}
+    <div class="alert alert-info shadow-sm">Brak aktywnych grup TOP. Administrator musi najpierw utworzyć grupy.</div>
+    {% endfor %}
+</div>
+{% endblock %}

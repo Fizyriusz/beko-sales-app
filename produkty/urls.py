@@ -62,4 +62,13 @@ urlpatterns = [
     path('konta/dodaj/', views.konto_dodaj, name='konto_dodaj'),
     path('konta/edytuj/<int:user_id>/', views.konto_edytuj, name='konto_edytuj'),
     path('konta/usun/<int:user_id>/', views.konto_usun, name='konto_usun'),
+
+    # Lista TOP
+    path('top-lista/', views.top_lista, name='top_lista'),
+    path('top-lista/zapisz/<int:subgrupa_id>/', views.top_lista_zapisz, name='top_lista_zapisz'),
+    path('top-lista/manage/', views.top_lista_manage, name='top_lista_manage'),
+    path('top-lista/manage/group/add/', views.top_lista_group_add, name='top_lista_group_add'),
+    path('top-lista/manage/subgroup/add/', views.top_lista_subgroup_add, name='top_lista_subgroup_add'),
+    path('top-lista/manage/group/delete/<int:group_id>/', views.top_lista_delete_group, name='top_lista_delete_group'),
+    path('top-lista/manage/subgroup/delete/<int:subgroup_id>/', views.top_lista_delete_subgroup, name='top_lista_delete_subgroup'),
 ]
