@@ -39,6 +39,7 @@ urlpatterns = [
     # Otwarcie/Zamkniecie dnia
     path('dzien/otwarcie/', views.otwarcie_dnia, name='otwarcie_dnia'),
     path('dzien/zamkniecie/', views.zamkniecie_dnia, name='zamkniecie_dnia'),
+    path('dzien/checklista/', views.checklista_podglad, name='checklista_podglad'),
     
     # Grafik
     path('grafik/', views.grafik_view, name='grafik'),
@@ -46,9 +47,19 @@ urlpatterns = [
 
     # Hub Wiedzy
     path('hub-wiedzy/', views.hub_wiedzy, name='hub_wiedzy'),
+    path('hub-wiedzy/funkcja/dodaj/', views.funkcja_dodaj, name='funkcja_dodaj'),
     path('hub-wiedzy/funkcja/<int:funkcja_id>/', views.funkcja_szczegoly, name='funkcja_szczegoly'),
+    path('hub-wiedzy/funkcja/edytuj/<int:funkcja_id>/', views.funkcja_edytuj, name='funkcja_edytuj'),
+    path('hub-wiedzy/podpowiedz/dodaj/', views.podpowiedz_dodaj, name='podpowiedz_dodaj'),
     path('hub-wiedzy/podpowiedz/<int:podpowiedz_id>/', views.podpowiedz_szczegoly, name='podpowiedz_szczegoly'),
+    path('hub-wiedzy/podpowiedz/edytuj/<int:podpowiedz_id>/', views.podpowiedz_edytuj, name='podpowiedz_edytuj'),
     
     # Historia Sprzedazy
     path('produkt/<int:produkt_id>/historia/', views.historia_sprzedazy_produktu, name='historia_sprzedazy_produktu'),
+
+    # Konta
+    path('konta/', views.konta_lista, name='konta_lista'),
+    path('konta/dodaj/', views.konto_dodaj, name='konto_dodaj'),
+    path('konta/edytuj/<int:user_id>/', views.konto_edytuj, name='konto_edytuj'),
+    path('konta/usun/<int:user_id>/', views.konto_usun, name='konto_usun'),
 ]

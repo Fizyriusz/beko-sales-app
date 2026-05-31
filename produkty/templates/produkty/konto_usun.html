@@ -1,0 +1,25 @@
+{% extends 'produkty/base.html' %}
+
+{% block title %}Usuwanie Konta{% endblock %}
+
+{% block content %}
+<div class="container mt-4">
+    <div class="mb-3">
+        <a href="{% url 'produkty:konta_lista' %}" class="btn btn-outline-secondary"><i class="fas fa-arrow-left"></i> Wróć do listy kont</a>
+    </div>
+
+    <div class="card shadow-sm border-danger max-w-md mx-auto" style="max-width: 500px;">
+        <div class="card-header bg-danger text-white">
+            <h3 class="mb-0"><i class="fas fa-exclamation-triangle"></i> Potwierdź Usunięcie</h3>
+        </div>
+        <div class="card-body text-center">
+            <p class="fs-5">Czy na pewno chcesz bezpowrotnie usunąć konto użytkownika <strong>{{ konta_user.username }}</strong>?</p>
+            <form method="post" class="mt-4 d-flex justify-content-around">
+                {% csrf_token %}
+                <a href="{% url 'produkty:konta_lista' %}" class="btn btn-secondary px-4">Anuluj</a>
+                <button type="submit" class="btn btn-danger px-4">Tak, usuń to konto</button>
+            </form>
+        </div>
+    </div>
+</div>
+{% endblock %}

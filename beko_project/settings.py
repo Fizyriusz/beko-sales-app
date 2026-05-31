@@ -55,6 +55,7 @@ MIDDLEWARE = [
     "django.contrib.auth.middleware.AuthenticationMiddleware",
     "django.contrib.messages.middleware.MessageMiddleware",
     "django.middleware.clickjacking.XFrameOptionsMiddleware",
+    "produkty.middleware.NoCacheMiddleware",
 ]
 
 ROOT_URLCONF = "beko_project.urls"

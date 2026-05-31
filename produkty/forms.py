@@ -47,3 +47,55 @@ class ProduktForm(forms.ModelForm):
             'stawka': forms.NumberInput(attrs={'class': 'form-control'}),
         }
 
+from django.contrib.auth.models import User
+from .models import Funkcja, Podpowiedz
+
+class UserCreateForm(forms.ModelForm):
+    password = forms.CharField(widget=forms.PasswordInput(attrs={'class': 'form-control'}), label="Hasło")
+    
+    class Meta:
+        model = User
+        fields = ['username', 'password']
+        widgets = {
+            'username': forms.TextInput(attrs={'class': 'form-control'}),
+        }
+        labels = {
+            'username': 'Login (Nazwa użytkownika)'
+        }
+        
+    def save(self, commit=True):
+        user = super().save(commit=False)
+        user.set_password(self.cleaned_data["password"])
+        if commit:
+            user.save()
+        return user
+
+class UserEditForm(forms.ModelForm):
+    class Meta:
+        model = User
+        fields = ['username']
+        widgets = {
+            'username': forms.TextInput(attrs={'class': 'form-control'}),
+        }
+        labels = {
+            'username': 'Login (Nazwa użytkownika)'
+        }
+
+class FunkcjaForm(forms.ModelForm):
+    class Meta:
+        model = Funkcja
+        fields = ['nazwa', 'opis', 'produkty']
+        widgets = {
+            'nazwa': forms.TextInput(attrs={'class': 'form-control'}),
+            'opis': forms.Textarea(attrs={'class': 'form-control', 'rows': 3}),
+            'produkty': forms.SelectMultiple(attrs={'class': 'form-control', 'size': '10'}),
+        }
+
+class PodpowiedzForm(forms.ModelForm):
+    class Meta:
+        model = Podpowiedz
+        fields = ['tytul', 'tresc']
+        widgets = {
+            'tytul': forms.TextInput(attrs={'class': 'form-control'}),
+            'tresc': forms.Textarea(attrs={'class': 'form-control', 'rows': 10}),
+        }

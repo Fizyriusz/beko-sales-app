@@ -1,0 +1,64 @@
+{% extends 'produkty/base.html' %}
+
+{% block title %}Zarządzanie Kontami{% endblock %}
+
+{% block content %}
+<div class="container mt-4">
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <h2><i class="fas fa-users text-primary"></i> Zarządzanie Kontami</h2>
+        <a href="{% url 'produkty:konto_dodaj' %}" class="btn btn-success"><i class="fas fa-user-plus"></i> Dodaj Użytkownika</a>
+    </div>
+
+    <div class="card shadow-sm">
+        <div class="card-body p-0">
+            <div class="table-responsive">
+                <table class="table table-hover mb-0">
+                    <thead class="table-dark">
+                        <tr>
+                            <th>Nazwa Użytkownika</th>
+                            <th>Status Admina</th>
+                            <th>Ostatnie Logowanie</th>
+                            <th class="text-end">Akcje</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for konto in konta %}
+                        <tr>
+                            <td class="align-middle"><strong>{{ konto.username }}</strong></td>
+                            <td class="align-middle">
+                                {% if konto.is_staff or konto.is_superuser %}
+                                    <span class="badge bg-danger"><i class="fas fa-crown"></i> Admin</span>
+                                {% else %}
+                                    <span class="badge bg-secondary"><i class="fas fa-user"></i> Użytkownik</span>
+                                {% endif %}
+                            </td>
+                            <td class="align-middle">
+                                {% if konto.last_login %}
+                                    {{ konto.last_login|date:"d.m.Y H:i" }}
+                                {% else %}
+                                    <span class="text-muted">Nigdy</span>
+                                {% endif %}
+                            </td>
+                            <td class="text-end align-middle">
+                                <a href="{% url 'produkty:konto_edytuj' konto.id %}" class="btn btn-sm btn-primary" title="Edytuj login">
+                                    <i class="fas fa-edit"></i> Edytuj
+                                </a>
+                                {% if request.user != konto and not konto.is_superuser %}
+                                <a href="{% url 'produkty:konto_usun' konto.id %}" class="btn btn-sm btn-danger" title="Usuń konto">
+                                    <i class="fas fa-trash"></i>
+                                </a>
+                                {% endif %}
+                            </td>
+                        </tr>
+                        {% empty %}
+                        <tr>
+                            <td colspan="4" class="text-center py-4">Brak użytkowników.</td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

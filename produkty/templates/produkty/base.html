@@ -62,6 +62,7 @@
                     <ul class="submenu">
                         <li><a href="{% url 'produkty:klienci' %}">Licznik klientów</a></li>
                         <li><a href="{% url 'produkty:hub_wiedzy' %}">Hub Wiedzy</a></li>
+                        <li><a href="{% url 'produkty:checklista_podglad' %}">Bieżąca Checklista</a></li>
                         {% if user.is_staff %}
                         <li><a href="{% url 'produkty:lista_produktow' %}">Lista produktów</a></li>
                         {% endif %}
@@ -72,6 +73,7 @@
                     <a href="#" class="submenu-toggle"><i class="fas fa-user-shield"></i> Admin <i class="fas fa-chevron-down float-end"></i></a>
                     <ul class="submenu">
                         <li><a href="{% url 'produkty:import_excel' %}">Import produktów</a></li>
+                        <li><a href="{% url 'produkty:konta_lista' %}">Zarządzanie kontami</a></li>
                         <li><a href="{% url 'produkty:wyciagnij_liste_modeli' %}">Wyciągnij listę modeli</a></li>
                         <li><a href="{% url 'produkty:delete_sales_for_day' %}">Usuń sprzedaż z dnia</a></li>
                     </ul>

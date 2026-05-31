@@ -12,6 +12,18 @@
             <strong>CHECKLISTA KONTROLNA – AMBASADORZY BEKO EUROPE</strong>
         </div>
         <div class="card-body">
+            {% if zadania_progress %}
+            <div class="alert alert-success shadow-sm mb-4">
+                <h5 class="alert-heading"><i class="fas fa-trophy text-warning"></i> Świetna robota!</h5>
+                <p class="mb-0">Dzisiejszą sprzedażą poczyniłeś progres w następujących zadaniach:</p>
+                <hr>
+                <ul class="mb-0">
+                    {% for progress in zadania_progress %}
+                    <li><strong>{{ progress.zadanie }}</strong>: +{{ progress.sztuki }} szt.</li>
+                    {% endfor %}
+                </ul>
+            </div>
+            {% endif %}
             <form method="post">
                 {% csrf_token %}
                 

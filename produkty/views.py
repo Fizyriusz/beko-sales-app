@@ -17,6 +17,11 @@ from django.http import HttpResponse, JsonResponse
 from django.contrib.auth.decorators import login_required
 from django.contrib.admin.views.decorators import staff_member_required
 from django.contrib.auth.models import User
+from django.contrib.auth import logout
+
+def custom_logout(request):
+    logout(request)
+    return redirect('login')
 from openpyxl.styles import PatternFill, Font, Alignment, Border, Side
 from openpyxl.utils import get_column_letter
 from io import BytesIO
@@ -916,12 +921,65 @@ def zamkniecie_dnia(request):
     odpowiedzi = OdpowiedzChecklisty.objects.filter(dzien_pracy=dzien)
     odp_dict = {o.punkt_id: o.wykonano for o in odpowiedzi}
     
+    # Obliczanie postępu w zadaniach
+    zadania_progress = []
+    dzisiejsze_sprzedaze = Sprzedaz.objects.filter(data_sprzedazy=today)
+    
+    aktywne_zadania = Zadanie.objects.filter(data_start__lte=today, data_koniec__gte=today)
+    for zadanie in aktywne_zadania:
+        # Zlicz ile sztuk z produktów w zadaniu sprzedano dzisiaj
+        sprzedane_dzis = dzisiejsze_sprzedaze.filter(produkt__in=zadanie.produkty.all()).aggregate(models.Sum('liczba_sztuk'))['liczba_sztuk__sum'] or 0
+        if sprzedane_dzis > 0:
+            zadania_progress.append({
+                'zadanie': zadanie.nazwa,
+                'sztuki': sprzedane_dzis
+            })
+    
     context = {
         'dzien': dzien,
         'punkty': punkty,
-        'odp_dict': odp_dict
+        'odp_dict': odp_dict,
+        'zadania_progress': zadania_progress
     }
     return render(request, 'produkty/zamkniecie_dnia.html', context)
+
+@login_required
+def checklista_podglad(request):
+    import datetime
+    today = datetime.date.today()
+    dzien = DzienPracy.objects.filter(user=request.user, data=today).first()
+    
+    if not dzien:
+        messages.warning(request, "Musisz rozpocząć dzień pracy, aby podejrzeć checklistę.")
+        return redirect('produkty:home')
+        
+    all_punkty = list(PunktChecklisty.objects.filter(aktywny=True))
+    seen_texts = set()
+    punkty = []
+    for p in all_punkty:
+        if p.tekst not in seen_texts:
+            seen_texts.add(p.tekst)
+            punkty.append(p)
+            
+    odpowiedzi = OdpowiedzChecklisty.objects.filter(dzien_pracy=dzien)
+    odp_dict = {o.punkt_id: o.wykonano for o in odpowiedzi}
+    
+    if request.method == 'POST':
+        for punkt in punkty:
+            wykonano = request.POST.get(f'punkt_{punkt.id}') == 'on'
+            OdpowiedzChecklisty.objects.update_or_create(
+                dzien_pracy=dzien,
+                punkt=punkt,
+                defaults={'wykonano': wykonano}
+            )
+        messages.success(request, "Checklista została zaktualizowana.")
+        return redirect('produkty:checklista_podglad')
+
+    return render(request, 'produkty/checklista_podglad.html', {
+        'dzien': dzien,
+        'punkty': punkty,
+        'odp_dict': odp_dict
+    })
 
 @login_required
 def grafik_view(request):
@@ -1280,3 +1338,99 @@ def historia_sprzedazy_produktu(request, produkt_id):
         'sprzedaz_list': sprzedaz_list,
         'suma_sztuk': suma_sztuk
     })
+
+from .forms import UserCreateForm, UserEditForm
+
+@staff_member_required
+def konta_lista(request):
+    konta = User.objects.all().order_by('username')
+    return render(request, 'produkty/konta_lista.html', {'konta': konta})
+
+@staff_member_required
+def konto_dodaj(request):
+    if request.method == 'POST':
+        form = UserCreateForm(request.POST)
+        if form.is_valid():
+            form.save()
+            messages.success(request, 'Konto zostało utworzone pomyślnie.')
+            return redirect('produkty:konta_lista')
+    else:
+        form = UserCreateForm()
+    return render(request, 'produkty/konto_form.html', {'form': form, 'akcja': 'Dodaj'})
+
+@staff_member_required
+def konto_edytuj(request, user_id):
+    konta_user = get_object_or_404(User, id=user_id)
+    if request.method == 'POST':
+        form = UserEditForm(request.POST, instance=konta_user)
+        if form.is_valid():
+            form.save()
+            messages.success(request, 'Zaktualizowano dane konta.')
+            return redirect('produkty:konta_lista')
+    else:
+        form = UserEditForm(instance=konta_user)
+    return render(request, 'produkty/konto_form.html', {'form': form, 'akcja': 'Edytuj'})
+
+@staff_member_required
+def konto_usun(request, user_id):
+    konta_user = get_object_or_404(User, id=user_id)
+    if request.method == 'POST':
+        if konta_user != request.user and not konta_user.is_superuser:
+            konta_user.delete()
+            messages.success(request, 'Konto zostało usunięte.')
+        else:
+            messages.error(request, 'Nie możesz usunąć tego konta.')
+        return redirect('produkty:konta_lista')
+    return render(request, 'produkty/konto_usun.html', {'konta_user': konta_user})
+
+from .forms import FunkcjaForm, PodpowiedzForm
+
+@staff_member_required
+def funkcja_dodaj(request):
+    if request.method == 'POST':
+        form = FunkcjaForm(request.POST)
+        if form.is_valid():
+            form.save()
+            messages.success(request, 'Funkcja została dodana.')
+            return redirect('produkty:hub_wiedzy')
+    else:
+        form = FunkcjaForm()
+    return render(request, 'produkty/formularz_wiedzy.html', {'form': form, 'akcja': 'Dodaj', 'typ': 'Funkcję'})
+
+@staff_member_required
+def funkcja_edytuj(request, funkcja_id):
+    funkcja = get_object_or_404(Funkcja, id=funkcja_id)
+    if request.method == 'POST':
+        form = FunkcjaForm(request.POST, instance=funkcja)
+        if form.is_valid():
+            form.save()
+            messages.success(request, 'Zaktualizowano funkcję.')
+            return redirect('produkty:funkcja_szczegoly', funkcja_id=funkcja.id)
+    else:
+        form = FunkcjaForm(instance=funkcja)
+    return render(request, 'produkty/formularz_wiedzy.html', {'form': form, 'akcja': 'Edytuj', 'typ': 'Funkcję'})
+
+@staff_member_required
+def podpowiedz_dodaj(request):
+    if request.method == 'POST':
+        form = PodpowiedzForm(request.POST)
+        if form.is_valid():
+            form.save()
+            messages.success(request, 'Podpowiedź została dodana.')
+            return redirect('produkty:hub_wiedzy')
+    else:
+        form = PodpowiedzForm()
+    return render(request, 'produkty/formularz_wiedzy.html', {'form': form, 'akcja': 'Dodaj', 'typ': 'Podpowiedź'})
+
+@staff_member_required
+def podpowiedz_edytuj(request, podpowiedz_id):
+    podpowiedz = get_object_or_404(Podpowiedz, id=podpowiedz_id)
+    if request.method == 'POST':
+        form = PodpowiedzForm(request.POST, instance=podpowiedz)
+        if form.is_valid():
+            form.save()
+            messages.success(request, 'Zaktualizowano podpowiedź.')
+            return redirect('produkty:podpowiedz_szczegoly', podpowiedz_id=podpowiedz.id)
+    else:
+        form = PodpowiedzForm(instance=podpowiedz)
+    return render(request, 'produkty/formularz_wiedzy.html', {'form': form, 'akcja': 'Edytuj', 'typ': 'Podpowiedź'})

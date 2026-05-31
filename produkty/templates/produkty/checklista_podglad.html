@@ -1,0 +1,38 @@
+{% extends 'produkty/base.html' %}
+
+{% block title %}Bieżąca Checklista{% endblock %}
+
+{% block content %}
+<div class="container mt-4">
+    <h2>Bieżąca Checklista: {{ dzien.data }}</h2>
+    <p class="text-muted">Dzień otwarty o: {{ dzien.czas_otwarcia|time:"H:i" }}</p>
+
+    <div class="card mt-4 shadow-sm border-info">
+        <div class="card-header bg-info text-dark">
+            <strong><i class="fas fa-list-check"></i> CHECKLISTA KONTROLNA – PODGLĄD</strong>
+        </div>
+        <div class="card-body">
+            <p class="mb-3 text-muted">Zaznaczaj punkty na bieżąco, aby wieczorem szybciej zamknąć dzień.</p>
+            <form method="post">
+                {% csrf_token %}
+                
+                <div class="list-group mb-4">
+                    {% for punkt in punkty %}
+                    <label class="list-group-item d-flex gap-2 align-items-center">
+                        <input class="form-check-input flex-shrink-0" type="checkbox" name="punkt_{{ punkt.id }}" value="on" 
+                        {% for k, v in odp_dict.items %}{% if k == punkt.id and v %}checked{% endif %}{% endfor %}>
+                        <span>
+                            {{ punkt.tekst }}
+                        </span>
+                    </label>
+                    {% empty %}
+                    <div class="alert alert-info">Brak zdefiniowanych punktów checklisty.</div>
+                    {% endfor %}
+                </div>
+                
+                <button type="submit" class="btn btn-info w-100"><i class="fas fa-save"></i> Zapisz postęp checklisty</button>
+            </form>
+        </div>
+    </div>
+</div>
+{% endblock %}
