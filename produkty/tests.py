@@ -285,3 +285,42 @@ class DailySalesTestCase(TestCase):
     def test_grafik_view(self):
         response = self.client.get(reverse("produkty:grafik"))
         self.assertEqual(response.status_code, 200)
+
+
+@override_settings(
+    DATABASES={"default": {"ENGINE": "django.db.backends.sqlite3", "NAME": ":memory:"}}
+)
+class PolecaneModeleTestCase(TestCase):
+    def setUp(self):
+        self.user = User.objects.create_user(username="recuser", password="pass")
+        self.client = Client()
+        self.client.login(username="recuser", password="pass")
+        self.today = timezone.now().date()
+
+    def test_polecane_modele_view_renders(self):
+        # Create products in different groups and brands
+        p1 = Produkt.objects.create(model="MOD1", stawka=Decimal("10.00"), grupa_towarowa="PRALKI", marka="BEKO")
+        p2 = Produkt.objects.create(model="MOD2", stawka=Decimal("25.00"), grupa_towarowa="PRALKI", marka="BEKO")
+        p3 = Produkt.objects.create(model="MOD3", stawka=Decimal("5.00"), grupa_towarowa="PRALKI", marka="BEKO")
+        
+        # p2 has higher stawka (25.00 vs 10.00 vs 5.00), so it should rank higher than p1 and p3 initially.
+        response = self.client.get(reverse("produkty:polecane_modele"))
+        self.assertEqual(response.status_code, 200)
+        self.assertTemplateUsed(response, "produkty/polecane_modele.html")
+        
+        # Verify ranking order
+        recs = response.context["recommendations"]
+        self.assertEqual(recs[0][0], "PRALKI")
+        brand_data = recs[0][1]
+        self.assertEqual(brand_data[0][0], "BEKO")
+        products = brand_data[0][1]
+        
+        self.assertEqual(products[0]["model"], "MOD2")
+        self.assertEqual(products[1]["model"], "MOD1")
+        self.assertEqual(products[2]["model"], "MOD3")
+
+    def test_prefill_sprzedaz_view(self):
+        response = self.client.get(reverse("produkty:sprzedaz") + "?model=MOD_TEST")
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(response.context["prefilled_model"], "MOD_TEST")
+        self.assertEqual(response.context["today"], timezone.now().date().strftime('%Y-%m-%d'))

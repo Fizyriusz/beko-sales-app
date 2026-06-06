@@ -1,0 +1,488 @@
+{% extends 'produkty/base.html' %}
+
+{% block title %}Polecane Modele - Beko Ambassador{% endblock %}
+
+{% block content %}
+<div class="recommendations-container">
+    <!-- Header Section -->
+    <div class="recommendations-header mb-4">
+        <div class="d-flex flex-column flex-md-row justify-content-between align-items-center gap-3">
+            <div>
+                <h1 class="page-title mb-1">Polecane Modele</h1>
+                <p class="text-muted mb-0">Najbardziej dochodowe i najlepiej rotujące produkty na dany miesiąc.</p>
+            </div>
+            
+            <!-- Month Navigation -->
+            <div class="month-nav-wrapper d-flex align-items-center shadow-sm">
+                <a href="{% url 'produkty:polecane_modele' year=prev_year month=prev_month %}" class="nav-arrow" title="Poprzedni miesiąc">
+                    <i class="fas fa-chevron-left"></i>
+                </a>
+                <span class="current-month-label">{{ month_name }}</span>
+                <a href="{% url 'produkty:polecane_modele' year=next_year month=next_month %}" class="nav-arrow" title="Następny miesiąc">
+                    <i class="fas fa-chevron-right"></i>
+                </a>
+            </div>
+        </div>
+    </div>
+
+    <!-- Recommendation Info Box -->
+    <div class="info-card mb-4 p-3 shadow-sm d-flex align-items-start gap-3">
+        <div class="info-icon-box flex-shrink-0 text-primary fs-3">
+            <i class="fas fa-lightbulb"></i>
+        </div>
+        <div>
+            <h5 class="info-card-title mb-1">Jak powstają rekomendacje?</h5>
+            <p class="info-card-text text-muted mb-0">
+                Modele są sugerowane na podstawie zysku prowizyjnego z bazowej stawki, aktywnych w tym miesiącu wyzwań i zadań (premie dodatkowe) oraz historycznej liczby sprzedanych sztuk w tym samym miesiącu w ubiegłych latach.
+            </p>
+        </div>
+    </div>
+
+    {% if recommendations %}
+        <!-- Product Group Tabs -->
+        <div class="group-tabs-scroll-container mb-4">
+            <div class="group-tabs d-flex gap-2">
+                {% for group, brands in recommendations %}
+                    <button class="tab-btn {% if forloop.first %}active{% endif %}" onclick="showGroup('{{ group|slugify }}')">
+                        <i class="fas fa-tags me-2 opacity-75"></i>{{ group }}
+                    </button>
+                {% endfor %}
+            </div>
+        </div>
+
+        <!-- Product Group Sections -->
+        <div class="recommendations-content">
+            {% for group, brands in recommendations %}
+                <div id="group-{{ group|slugify }}" class="group-content {% if not forloop.first %}d-none{% endif %}">
+                    <div class="row">
+                        {% for brand, products in brands %}
+                            <div class="col-xl-6 col-lg-12 mb-4">
+                                <div class="brand-card shadow-sm h-100">
+                                    <div class="brand-header d-flex justify-content-between align-items-center">
+                                        <div class="d-flex align-items-center gap-2">
+                                            <i class="fas fa-award text-warning"></i>
+                                            <h3 class="brand-title mb-0">{{ brand }}</h3>
+                                        </div>
+                                        <span class="badge bg-brand-count">{{ products|length }} polecane</span>
+                                    </div>
+                                    <div class="brand-body p-3">
+                                        {% if not products %}
+                                            <p class="text-muted text-center py-4 mb-0">Brak modeli w tej grupie i marce.</p>
+                                        {% else %}
+                                            <div class="table-responsive">
+                                                <table class="table table-hover align-middle mb-0">
+                                                    <thead>
+                                                        <tr>
+                                                            <th style="width: 60px;" class="text-center">Miejsce</th>
+                                                            <th>Model</th>
+                                                            <th class="text-end">Stawka</th>
+                                                            <th class="text-center">Sprzedaż (Mies./Suma)</th>
+                                                            <th style="width: 60px;" class="text-end">Opcje</th>
+                                                        </tr>
+                                                    </thead>
+                                                    <tbody>
+                                                        {% for p in products %}
+                                                            <tr class="product-row">
+                                                                <td class="text-center">
+                                                                    {% if forloop.counter == 1 %}
+                                                                        <span class="rank-badge gold" title="Złoty model - najlepszy wybór">#1</span>
+                                                                    {% elif forloop.counter == 2 %}
+                                                                        <span class="rank-badge silver" title="Srebrny model - wysoka rekomendacja">#2</span>
+                                                                    {% elif forloop.counter == 3 %}
+                                                                        <span class="rank-badge bronze" title="Brązowy model - dobry wybór">#3</span>
+                                                                    {% else %}
+                                                                        <span class="rank-badge other">#{{ forloop.counter }}</span>
+                                                                    {% endif %}
+                                                                </td>
+                                                                <td>
+                                                                    <div class="model-name">
+                                                                        <a href="{% url 'produkty:historia_sprzedazy_produktu' produkt_id=p.id %}" class="model-link" title="Zobacz historię sprzedaży modelu {{ p.model }}">
+                                                                            {{ p.model }}
+                                                                        </a>
+                                                                    </div>
+                                                                    {% if p.tasks %}
+                                                                        <div class="task-badges-container mt-1">
+                                                                            {% for task in p.tasks %}
+                                                                                <span class="badge bg-danger-subtle text-danger border border-danger-subtle task-badge" title="Wyzwanie: {{ task }}">
+                                                                                    <i class="fas fa-fire me-1 animate-pulse"></i>Zadanie
+                                                                                </span>
+                                                                            {% endfor %}
+                                                                        </div>
+                                                                    {% endif %}
+                                                                </td>
+                                                                <td class="text-end">
+                                                                    <span class="commission-badge">+{{ p.stawka }} zł</span>
+                                                                </td>
+                                                                <td class="text-center">
+                                                                    <div class="sales-stats" title="Liczba sprzedanych sztuk w tym miesiącu (historycznie) / łącznie w systemie">
+                                                                        <span class="text-primary font-weight-bold fs-6">{{ p.month_sales }}</span>
+                                                                        <span class="text-muted" style="font-size: 0.8rem;">/ {{ p.total_sales }} szt.</span>
+                                                                    </div>
+                                                                </td>
+                                                                <td class="text-end">
+                                                                    <a href="{% url 'produkty:sprzedaz' %}?model={{ p.model }}" class="btn-register-sale" title="Dodaj sprzedaż tego modelu">
+                                                                        <i class="fas fa-cart-plus"></i>
+                                                                    </a>
+                                                                </td>
+                                                            </tr>
+                                                        {% endfor %}
+                                                    </tbody>
+                                                </table>
+                                            </div>
+                                        {% endif %}
+                                    </div>
+                                </div>
+                            </div>
+                        {% endfor %}
+                    </div>
+                </div>
+            {% endfor %}
+        </div>
+    {% else %}
+        <div class="card p-5 text-center shadow-sm">
+            <div class="text-muted fs-1 mb-3">
+                <i class="fas fa-folder-open"></i>
+            </div>
+            <h4>Brak danych do wyznaczenia rekomendacji</h4>
+            <p class="text-muted max-w-md mx-auto">
+                Nie znaleziono produktów ani historii sprzedaży do obliczenia rankingu dla miesiąca: <strong>{{ month_name }}</strong>. Dodaj produkty za pomocą importera i zarejestruj sprzedaż, aby system mógł dopasować polecane modele.
+            </p>
+            <div class="mt-3">
+                <a href="{% url 'produkty:import_excel' %}" class="btn btn-primary btn-sm"><i class="fas fa-file-import me-1"></i>Importuj produkty</a>
+            </div>
+        </div>
+    {% endif %}
+</div>
+
+<!-- Embedded Custom Premium Styles -->
+<style>
+    /* CSS variables matching the theme */
+    :root {
+        --beko-blue: #002450;
+        --beko-blue-hover: #001a3b;
+        --accent-teal: #1abc9c;
+        --accent-teal-hover: #16a085;
+        --gold-grad: linear-gradient(135deg, #f39c12, #f1c40f);
+        --silver-grad: linear-gradient(135deg, #bdc3c7, #ecf0f1);
+        --bronze-grad: linear-gradient(135deg, #d35400, #e67e22);
+    }
+
+    .recommendations-container {
+        max-width: 1300px;
+        margin: 0 auto;
+    }
+
+    .page-title {
+        font-size: 26px;
+        font-weight: 700;
+        color: var(--beko-blue);
+    }
+
+    /* Month Navigation Header */
+    .month-nav-wrapper {
+        background: #ffffff;
+        border-radius: 30px;
+        border: 1px solid #e3e6f0;
+        padding: 5px;
+        display: flex;
+        align-items: center;
+        background-color: #ffffff;
+    }
+
+    .current-month-label {
+        font-weight: 600;
+        font-size: 1rem;
+        color: var(--beko-blue);
+        padding: 0 15px;
+        min-width: 140px;
+        text-align: center;
+    }
+
+    .nav-arrow {
+        width: 32px;
+        height: 32px;
+        border-radius: 50%;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        color: var(--beko-blue);
+        text-decoration: none;
+        transition: all 0.2s ease;
+    }
+
+    .nav-arrow:hover {
+        background-color: #f0f4f8;
+        color: var(--accent-teal);
+    }
+
+    /* Info card */
+    .info-card {
+        background-color: #ebf5fb;
+        border-left: 4px solid #3498db;
+        border-radius: 8px;
+    }
+    
+    .info-card-title {
+        color: #2c3e50;
+        font-weight: 600;
+        font-size: 0.95rem;
+    }
+    
+    .info-card-text {
+        font-size: 0.85rem;
+        line-height: 1.4;
+    }
+
+    /* Tabs scrollbar hiding */
+    .group-tabs-scroll-container {
+        overflow-x: auto;
+        -webkit-overflow-scrolling: touch;
+        padding-bottom: 5px;
+    }
+
+    .group-tabs-scroll-container::-webkit-scrollbar {
+        height: 4px;
+    }
+
+    .group-tabs-scroll-container::-webkit-scrollbar-thumb {
+        background-color: #cbd5e1;
+        border-radius: 4px;
+    }
+
+    .group-tabs {
+        white-space: nowrap;
+    }
+
+    /* Tab Buttons */
+    .tab-btn {
+        background-color: #ffffff;
+        color: #5a5c69;
+        border: 1px solid #e3e6f0;
+        border-radius: 20px;
+        padding: 8px 18px;
+        font-size: 0.9rem;
+        font-weight: 600;
+        cursor: pointer;
+        transition: all 0.2s ease;
+        display: inline-flex;
+        align-items: center;
+        box-shadow: 0 2px 4px rgba(0,0,0,0.02);
+    }
+
+    .tab-btn:hover {
+        border-color: var(--beko-blue);
+        color: var(--beko-blue);
+        background-color: #f8fafc;
+    }
+
+    .tab-btn.active {
+        background-color: var(--beko-blue);
+        color: #ffffff;
+        border-color: var(--beko-blue);
+        transform: translateY(-1px);
+        box-shadow: 0 4px 6px rgba(0, 36, 80, 0.15);
+    }
+
+    /* Brand Card */
+    .brand-card {
+        background: #ffffff;
+        border-radius: 12px;
+        border: 1px solid #e3e6f0;
+        overflow: hidden;
+        transition: transform 0.2s, box-shadow 0.2s;
+    }
+
+    .brand-card:hover {
+        transform: translateY(-2px);
+        box-shadow: 0 8px 20px rgba(0,0,0,0.06) !important;
+    }
+
+    .brand-header {
+        background-color: #f8fafc;
+        border-bottom: 1px solid #e3e6f0;
+        padding: 12px 18px;
+    }
+
+    .brand-title {
+        font-size: 1.1rem;
+        font-weight: 700;
+        color: var(--beko-blue);
+        letter-spacing: 0.5px;
+    }
+
+    .badge.bg-brand-count {
+        background-color: #e2e8f0;
+        color: var(--beko-blue);
+        font-weight: 600;
+        font-size: 0.8rem;
+        border-radius: 6px;
+        padding: 5px 10px;
+    }
+
+    /* Table styles */
+    .table th {
+        font-size: 0.75rem;
+        text-transform: uppercase;
+        color: #94a3b8;
+        font-weight: 700;
+        border-bottom: 2px solid #f1f5f9;
+        padding: 10px 12px;
+    }
+
+    .table td {
+        padding: 12px;
+        border-bottom: 1px solid #f1f5f9;
+    }
+
+    .product-row {
+        transition: background-color 0.15s ease;
+    }
+
+    .product-row:hover {
+        background-color: #f8fafc;
+    }
+
+    /* Rank Badges */
+    .rank-badge {
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        width: 28px;
+        height: 28px;
+        border-radius: 50%;
+        font-size: 0.8rem;
+        font-weight: 700;
+        color: #ffffff;
+    }
+
+    .rank-badge.gold {
+        background: var(--gold-grad);
+        box-shadow: 0 2px 5px rgba(243, 156, 18, 0.4);
+    }
+
+    .rank-badge.silver {
+        background: var(--silver-grad);
+        color: #2c3e50;
+        box-shadow: 0 2px 5px rgba(189, 195, 199, 0.4);
+    }
+
+    .rank-badge.bronze {
+        background: var(--bronze-grad);
+        box-shadow: 0 2px 5px rgba(211, 84, 0, 0.4);
+    }
+
+    .rank-badge.other {
+        background-color: #cbd5e1;
+        color: #475569;
+    }
+
+    /* Model Link */
+    .model-link {
+        font-weight: 600;
+        color: var(--beko-blue);
+        text-decoration: none;
+        font-size: 0.95rem;
+        transition: color 0.2s;
+    }
+
+    .model-link:hover {
+        color: var(--accent-teal);
+        text-decoration: underline;
+    }
+
+    /* Commission Pill */
+    .commission-badge {
+        background-color: #d1fae5;
+        color: #065f46;
+        font-weight: 700;
+        font-size: 0.85rem;
+        padding: 4px 10px;
+        border-radius: 20px;
+        display: inline-block;
+        border: 1px solid #a7f3d0;
+    }
+
+    /* Sales Stats */
+    .sales-stats {
+        display: inline-flex;
+        flex-direction: column;
+        align-items: center;
+        line-height: 1.2;
+    }
+
+    /* Quick Register Button */
+    .btn-register-sale {
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        width: 32px;
+        height: 32px;
+        background-color: #eff6ff;
+        color: #2563eb;
+        border-radius: 8px;
+        transition: all 0.2s ease;
+        text-decoration: none;
+        border: 1px solid #dbeafe;
+    }
+
+    .btn-register-sale:hover {
+        background-color: #2563eb;
+        color: #ffffff;
+        transform: scale(1.1);
+        box-shadow: 0 4px 6px rgba(37, 99, 235, 0.2);
+    }
+
+    /* Task badges */
+    .task-badge {
+        font-size: 0.7rem;
+        padding: 2px 6px;
+        border-radius: 4px;
+        font-weight: 600;
+    }
+
+    @keyframes pulse {
+        0%, 100% { opacity: 1; }
+        50% { opacity: 0.6; }
+    }
+
+    .animate-pulse {
+        animation: pulse 2s cubic-bezier(0.4, 0, 0.6, 1) infinite;
+    }
+
+    @media (max-width: 576px) {
+        .table th, .table td {
+            padding: 8px 6px;
+        }
+        .page-title {
+            font-size: 22px;
+        }
+    }
+</style>
+
+<!-- Simple Tab Switching JS -->
+<script>
+    function showGroup(groupId) {
+        // Hide all group contents
+        document.querySelectorAll('.group-content').forEach(el => {
+            el.classList.add('d-none');
+        });
+        // Remove active class from all tab buttons
+        document.querySelectorAll('.tab-btn').forEach(btn => {
+            btn.classList.remove('active');
+        });
+        // Show selected group content
+        const selectedGroup = document.getElementById('group-' + groupId);
+        if (selectedGroup) {
+            selectedGroup.classList.remove('d-none');
+        }
+        // Add active class to clicked button
+        // Find button that contains onclick with the group ID
+        const targetBtn = Array.from(document.querySelectorAll('.tab-btn')).find(btn => {
+            return btn.getAttribute('onclick') && btn.getAttribute('onclick').includes(groupId);
+        });
+        if (targetBtn) {
+            targetBtn.classList.add('active');
+        }
+    }
+</script>
+{% endblock %}

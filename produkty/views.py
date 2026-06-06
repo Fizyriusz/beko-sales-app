@@ -258,7 +258,13 @@ def sprzedaz(request):
         _zapisz_sprzedaz_i_zadania(zatwierdzone_modele, data_sprzedazy)
         return redirect('produkty:sprzedaz_sukces')
 
-    return render(request, 'produkty/sprzedaz.html')
+    prefilled_model = request.GET.get('model', '')
+    today_str = timezone.now().date().strftime('%Y-%m-%d')
+    context = {
+        'prefilled_model': prefilled_model,
+        'today': today_str,
+    }
+    return render(request, 'produkty/sprzedaz.html', context)
 
 @login_required
 def sprzedaz_sukces(request):
@@ -1559,3 +1565,138 @@ def top_lista_delete_subgroup(request, subgroup_id):
     subgrupa.delete()
     messages.success(request, 'Usunięto podgrupę.')
     return redirect('produkty:top_lista_manage')
+
+
+@login_required
+def polecane_modele(request, year=None, month=None):
+    # Determine the target month and year
+    if year is None or month is None:
+        today = timezone.now().date()
+        year = today.year
+        month = today.month
+
+    from datetime import date
+    import calendar
+    
+    current_month_start = date(year, month, 1)
+    
+    prev_month_end = current_month_start - timedelta(days=1)
+    prev_year = prev_month_end.year
+    prev_month = prev_month_end.month
+    
+    next_month_start = (current_month_start + timedelta(days=32)).replace(day=1)
+    next_year = next_month_start.year
+    next_month = next_month_start.month
+    
+    last_day_of_month = calendar.monthrange(year, month)[1]
+    month_end_date = date(year, month, last_day_of_month)
+    
+    # 1. Fetch all products
+    products = Produkt.objects.all()
+    
+    # 2. Historical sales for the target calendar month (across all years)
+    sales_by_product_month = (
+        Sprzedaz.objects.filter(data_sprzedazy__month=month)
+        .values('produkt_id')
+        .annotate(total_qty=Sum('liczba_sztuk'))
+    )
+    month_sales_dict = {item['produkt_id']: item['total_qty'] for item in sales_by_product_month}
+    
+    # 3. Total historical sales (all time)
+    sales_by_product_total = (
+        Sprzedaz.objects.values('produkt_id')
+        .annotate(total_qty=Sum('liczba_sztuk'))
+    )
+    total_sales_dict = {item['produkt_id']: item['total_qty'] for item in sales_by_product_total}
+    
+    # 4. Active tasks in the target month
+    active_tasks = Zadanie.objects.filter(
+        data_start__lte=month_end_date,
+        data_koniec__gte=current_month_start
+    ).prefetch_related('produkty')
+    
+    # Map products to their active tasks
+    product_to_tasks = defaultdict(list)
+    for task in active_tasks:
+        for p in task.produkty.all():
+            product_to_tasks[p.id].append(task)
+            
+    # Group recommendations
+    recommendations_raw = defaultdict(lambda: defaultdict(list))
+    
+    for p in products:
+        prowizja_rate = p.stawka or Decimal('0.00')
+        month_sales = month_sales_dict.get(p.id, 0)
+        total_sales = total_sales_dict.get(p.id, 0)
+        tasks = product_to_tasks.get(p.id, [])
+        is_active_in_task = len(tasks) > 0
+        
+        # Scoring logic
+        score = float(prowizja_rate) * 1.0 + float(month_sales) * 5.0 + float(total_sales) * 1.0 + (50.0 if is_active_in_task else 0.0)
+        
+        task_info = []
+        for t in tasks:
+            task_type = t.get_typ_display() if hasattr(t, 'get_typ_display') else t.typ
+            task_info.append(f"{t.nazwa} ({task_type})")
+            
+        group_name = p.grupa_towarowa.strip().upper() if p.grupa_towarowa else 'INNE'
+        brand_name = p.marka.strip().upper() if p.marka else 'INNE'
+        
+        recommendations_raw[group_name][brand_name].append({
+            'id': p.id,
+            'model': p.model,
+            'stawka': prowizja_rate,
+            'month_sales': month_sales,
+            'total_sales': total_sales,
+            'tasks': task_info,
+            'score': score
+        })
+        
+    # Sort and take top 4 for each group + brand
+    grouped_recommendations = {}
+    for group_name, brands in recommendations_raw.items():
+        grouped_recommendations[group_name] = {}
+        for brand_name, items in brands.items():
+            sorted_items = sorted(
+                items,
+                key=lambda x: (-x['score'], -float(x['stawka']), -x['total_sales'], x['model'])
+            )
+            grouped_recommendations[group_name][brand_name] = sorted_items[:4]
+            
+    grouped_recommendations = {
+        g: b for g, b in grouped_recommendations.items() if b
+    }
+    
+    # Sort groups and brands alphabetically
+    sorted_recommendations = sorted(
+        [
+            (
+                g,
+                sorted(
+                    [(b, items) for b, items in brands.items()],
+                    key=lambda x: x[0]
+                )
+            )
+            for g, brands in grouped_recommendations.items()
+        ],
+        key=lambda x: x[0]
+    )
+    
+    # Translate month name to Polish
+    months_pl = {
+        1: 'Styczeń', 2: 'Luty', 3: 'Marzec', 4: 'Kwiecień', 5: 'Maj', 6: 'Czerwiec',
+        7: 'Lipiec', 8: 'Sierpień', 9: 'Wrzesień', 10: 'Październik', 11: 'Listopad', 12: 'Grudzień'
+    }
+    month_name_pl = f"{months_pl.get(month, '')} {year}"
+    
+    context = {
+        'recommendations': sorted_recommendations,
+        'year': year,
+        'month': month,
+        'month_name': month_name_pl,
+        'prev_year': prev_year,
+        'prev_month': prev_month,
+        'next_year': next_year,
+        'next_month': next_month,
+    }
+    return render(request, 'produkty/polecane_modele.html', context)

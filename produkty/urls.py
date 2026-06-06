@@ -14,6 +14,8 @@ urlpatterns = [
     path('podsumowanie/', views.podsumowanie_sprzedazy, name='podsumowanie_sprzedazy'),
     path('podsumowanie/reset/', views.reset_sprzedaz, name='reset_sprzedaz'),
     path('wyciagnij_liste_modeli/', views.wyciagnij_liste_modeli, name='wyciagnij_liste_modeli'),  # Nowy widok wyciągania listy modeli
+    path('polecane-modele/', views.polecane_modele, name='polecane_modele'),
+    path('polecane-modele/<int:year>/<int:month>/', views.polecane_modele, name='polecane_modele'),
 
     # Kalendarz
     path('calendar/', views.calendar_view, name='calendar'),

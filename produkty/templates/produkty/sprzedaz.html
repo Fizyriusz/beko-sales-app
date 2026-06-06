@@ -9,11 +9,11 @@
         {% csrf_token %}
         <div class="form-group">
             <label for="data_sprzedazy">Data Sprzedaży:</label>
-            <input type="date" id="data_sprzedazy" name="data_sprzedazy" required>
+            <input type="date" id="data_sprzedazy" name="data_sprzedazy" value="{% if today %}{{ today }}{% endif %}" required>
         </div>
         <div class="form-group">
             <label for="modele_sprzedazy">Modele sprzedane (każdy model w nowej linii):</label>
-            <textarea id="modele_sprzedazy" name="modele_sprzedazy" rows="10" cols="50" required></textarea>
+            <textarea id="modele_sprzedazy" name="modele_sprzedazy" rows="10" cols="50" required>{% if prefilled_model %}{{ prefilled_model }}{% endif %}</textarea>
         </div>
         <button type="submit" class="btn btn-primary">Zapisz Sprzedaż</button>
     </form>
