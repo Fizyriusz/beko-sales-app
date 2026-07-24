@@ -33,6 +33,23 @@ class ZadanieForm(forms.ModelForm):
         if data_start and data_koniec and data_koniec < data_start:
             raise forms.ValidationError("Data zakończenia nie może być wcześniejsza niż data rozpoczęcia.")
 
+        # Walidacja pol zaleznie od typu zadania - zapobiega zapisaniu zadania
+        # bez danych potrzebnych do naliczenia premii/mnoznika.
+        typ = cleaned_data.get('typ')
+        if typ == Zadanie.Typ.MIX_MNOZNIK:
+            if cleaned_data.get('mnoznik_mix') is None:
+                self.add_error('mnoznik_mix', "Zadanie typu 'Mix mnożnik' wymaga podania mnożnika.")
+            if cleaned_data.get('prog_mix') is None:
+                self.add_error('prog_mix', "Zadanie typu 'Mix mnożnik' wymaga podania progu.")
+        elif typ == Zadanie.Typ.MIX_PROWIZJA:
+            if cleaned_data.get('prog_mix') is None:
+                self.add_error('prog_mix', "Zadanie typu 'Mix prowizja' wymaga podania progu.")
+            if cleaned_data.get('prog_1_premia') is None and cleaned_data.get('prog_2_premia') is None:
+                self.add_error(None, "Zadanie typu 'Mix prowizja' wymaga podania co najmniej jednej premii progowej.")
+        elif typ == Zadanie.Typ.KONKRETNE_MODELE:
+            if cleaned_data.get('prog_1') is None:
+                self.add_error('prog_1', "Zadanie typu 'Konkretne modele' wymaga podania progu.")
+
         return cleaned_data
 
 
