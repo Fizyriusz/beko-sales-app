@@ -8,6 +8,7 @@ class Produkt(models.Model):
     stawka = models.DecimalField(max_digits=10, decimal_places=2)
     grupa_towarowa = models.CharField(max_length=100)
     marka = models.CharField(max_length=100, null=True, blank=True)
+    data_aktualizacji = models.DateField(null=True, blank=True, verbose_name="Data ostatniej aktualizacji")
 
     def __str__(self):
         return self.model

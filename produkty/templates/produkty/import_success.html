@@ -8,9 +8,35 @@
     {% else %}
         <h2>Dane zostały zaimportowane pomyślnie!</h2>
     {% endif %}
-    
-    <br><br>
-    
-    <a href="{% url 'produkty:import_excel' %}">Wróć do strony importu</a> | 
-    <a href="{% url 'produkty:home' %}">Wróć do strony głównej</a>
+
+    {% if data_importu %}
+    <div class="card mt-3" style="max-width:520px;">
+        <div class="card-body">
+            <h5 class="card-title">Podsumowanie importu ({{ data_importu }})</h5>
+            <ul class="list-group list-group-flush">
+                <li class="list-group-item d-flex justify-content-between">Nowe modele <span class="badge bg-success">{{ liczba_nowych }}</span></li>
+                <li class="list-group-item d-flex justify-content-between">Zaktualizowane modele <span class="badge bg-primary">{{ liczba_zaktualizowanych }}</span></li>
+                <li class="list-group-item d-flex justify-content-between">
+                    Modele spoza pliku
+                    <span>
+                        <span class="badge bg-secondary">{{ liczba_spoza }}</span>
+                        {% if wyzeruj_spoza %}<span class="badge bg-warning text-dark">wyzerowano: {{ wyzerowane }}</span>{% endif %}
+                    </span>
+                </li>
+            </ul>
+            {% if liczba_spoza and not wyzeruj_spoza %}
+            <p class="text-muted small mt-2 mb-0">
+                {{ liczba_spoza }} modeli z bazy nie było w tym pliku. Jeśli to pełna, aktualna baza — zaimportuj ją ponownie
+                z zaznaczoną opcją „Wyzeruj stawki modeli, których nie ma w tym pliku".
+            </p>
+            {% endif %}
+        </div>
+    </div>
+    {% endif %}
+
+    <br>
+
+    <a href="{% url 'produkty:import_excel' %}">Wróć do strony importu</a> |
+    <a href="{% url 'produkty:lista_produktow' %}">Lista produktów</a> |
+    <a href="{% url 'produkty:home' %}">Strona główna</a>
 {% endblock %}

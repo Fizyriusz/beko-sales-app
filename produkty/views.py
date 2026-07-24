@@ -84,6 +84,7 @@ logger = logging.getLogger(__name__)
 def import_excel(request):
     if request.method == 'POST' and 'file' in request.FILES:
         excel_file = request.FILES['file']
+        wyzeruj_spoza = request.POST.get('wyzeruj_spoza') == 'on'
         try:
             wb = openpyxl.load_workbook(excel_file)
             sheet = wb.active
@@ -98,7 +99,14 @@ def import_excel(request):
                 'error': 'Wystąpił błąd podczas przetwarzania pliku.'
             })
 
-        existing_products = {p.model: p for p in Produkt.objects.all()}
+        import_date = datetime.now().date()
+        # Klucz dopasowania = model znormalizowany (bez spacji, WIELKIE litery),
+        # spojnie z tym jak modele tworza sie przy sprzedazy. Zapobiega duplikatom
+        # i pominietym aktualizacjom stawek.
+        existing_products = {}
+        for p in Produkt.objects.all():
+            existing_products.setdefault((p.model or '').strip().upper(), p)
+
         products_to_create = []
         products_to_update = []
         models_seen = set()
@@ -114,10 +122,10 @@ def import_excel(request):
                 logger.warning(f"Wiersz {idx} pominięty - brak modelu.")
                 continue
 
-            model_str = str(model).strip()
-            if model_str in models_seen:
+            model_key = str(model).strip().upper()
+            if not model_key or model_key in models_seen:
                 continue
-            models_seen.add(model_str)
+            models_seen.add(model_key)
 
             try:
                 if stawka is None or stawka == '':
@@ -131,28 +139,49 @@ def import_excel(request):
             grupa_val = str(grupa_towarowa).strip() if grupa_towarowa else 'Nieznana'
             marka_val = str(marka).strip() if marka else 'Nieznana'
 
-            if model_str in existing_products:
-                p = existing_products[model_str]
-                if p.stawka != stawka_val or p.grupa_towarowa != grupa_val or p.marka != marka_val:
-                    p.stawka = stawka_val
-                    p.grupa_towarowa = grupa_val
-                    p.marka = marka_val
-                    products_to_update.append(p)
+            if model_key in existing_products:
+                p = existing_products[model_key]
+                p.stawka = stawka_val
+                p.grupa_towarowa = grupa_val
+                p.marka = marka_val
+                p.data_aktualizacji = import_date
+                products_to_update.append(p)
             else:
                 products_to_create.append(Produkt(
-                    model=model_str,
+                    model=model_key,
                     stawka=stawka_val,
                     grupa_towarowa=grupa_val,
-                    marka=marka_val
+                    marka=marka_val,
+                    data_aktualizacji=import_date,
                 ))
 
         if products_to_create:
             Produkt.objects.bulk_create(products_to_create, batch_size=500)
-        
-        if products_to_update:
-            Produkt.objects.bulk_update(products_to_update, ['stawka', 'grupa_towarowa', 'marka'], batch_size=500)
 
-        return render(request, 'produkty/import_success.html')
+        if products_to_update:
+            Produkt.objects.bulk_update(
+                products_to_update,
+                ['stawka', 'grupa_towarowa', 'marka', 'data_aktualizacji'],
+                batch_size=500,
+            )
+
+        # Modele obecne w bazie, ale nieobecne w tym pliku
+        spoza_pliku = [p for key, p in existing_products.items() if key not in models_seen]
+        wyzerowane = 0
+        if wyzeruj_spoza and spoza_pliku:
+            for p in spoza_pliku:
+                p.stawka = Decimal(0)
+            Produkt.objects.bulk_update(spoza_pliku, ['stawka'], batch_size=500)
+            wyzerowane = len(spoza_pliku)
+
+        return render(request, 'produkty/import_success.html', {
+            'liczba_nowych': len(products_to_create),
+            'liczba_zaktualizowanych': len(products_to_update),
+            'liczba_spoza': len(spoza_pliku),
+            'wyzerowane': wyzerowane,
+            'wyzeruj_spoza': wyzeruj_spoza,
+            'data_importu': import_date,
+        })
     elif request.method == 'POST':
         # Brak pliku w żądaniu POST
         return render(request, 'produkty/import_form.html', {'error': 'Nie wybrano pliku do importu.'})
@@ -1577,6 +1606,25 @@ def product_edit(request, product_id):
     else:
         form = ProduktForm(instance=produkt)
     return render(request, 'produkty/product_edit.html', {'form': form})
+
+@staff_member_required
+def product_delete(request, product_id):
+    """Usuwanie pojedynczego produktu. UWAGA: kasuje tez powiazane sprzedaze
+    (FK on_delete=CASCADE) - szablon ostrzega i pokazuje ich liczbe."""
+    produkt = get_object_or_404(Produkt, pk=product_id)
+    liczba_sprzedazy = Sprzedaz.objects.filter(produkt=produkt).count()
+    if request.method == 'POST':
+        model_name = produkt.model
+        produkt.delete()
+        messages.success(
+            request,
+            f"Usunięto produkt {model_name} wraz z {liczba_sprzedazy} rekordami sprzedaży."
+        )
+        return redirect('produkty:lista_produktow')
+    return render(request, 'produkty/product_delete.html', {
+        'produkt': produkt,
+        'liczba_sprzedazy': liczba_sprzedazy,
+    })
 
 from .models import Funkcja, Podpowiedz
 

@@ -1,0 +1,43 @@
+{% extends "produkty/base.html" %}
+
+{% block title %}Usuń produkt{% endblock %}
+
+{% block content %}
+<div class="container mt-4">
+    <div class="card border-danger">
+        <div class="card-header bg-danger text-white">Usuwanie produktu</div>
+        <div class="card-body">
+            <p>Czy na pewno chcesz usunąć produkt:</p>
+            <ul>
+                <li><strong>Model:</strong> {{ produkt.model }}</li>
+                <li><strong>Marka:</strong> {{ produkt.marka }}</li>
+                <li><strong>Grupa towarowa:</strong> {{ produkt.grupa_towarowa }}</li>
+                <li><strong>Stawka:</strong> {{ produkt.stawka }}</li>
+            </ul>
+
+            {% if liczba_sprzedazy %}
+            <div class="alert alert-danger">
+                <i class="fas fa-triangle-exclamation me-1"></i>
+                <strong>Uwaga!</strong> Ten produkt ma <strong>{{ liczba_sprzedazy }}</strong> rekordów sprzedaży.
+                Usunięcie produktu <strong>skasuje również całą tę sprzedaż</strong>, co wpłynie na podsumowania,
+                prowizje i realizację planu. Tej operacji nie można cofnąć.
+                <br>Jeśli chcesz tylko „wyłączyć" produkt bez utraty historii — zamiast usuwać, ustaw jego stawkę na 0 w edycji.
+            </div>
+            {% else %}
+            <div class="alert alert-warning">
+                Ten produkt nie ma zapisanej sprzedaży. Usunięcie jest bezpieczne.
+            </div>
+            {% endif %}
+
+            <form method="post">
+                {% csrf_token %}
+                <button type="submit" class="btn btn-danger"
+                        onclick="return confirm('Ostatecznie usunąć produkt {{ produkt.model }}{% if liczba_sprzedazy %} i jego {{ liczba_sprzedazy }} sprzedaży{% endif %}?');">
+                    Tak, usuń produkt{% if liczba_sprzedazy %} i sprzedaż{% endif %}
+                </button>
+                <a href="{% url 'produkty:lista_produktow' %}" class="btn btn-secondary">Anuluj</a>
+            </form>
+        </div>
+    </div>
+</div>
+{% endblock %}

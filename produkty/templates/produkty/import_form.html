@@ -9,9 +9,21 @@
     {% endif %}
     <form method="post" enctype="multipart/form-data">
         {% csrf_token %}
-        <input type="file" name="file" required>
-        <button type="submit">Załaduj</button>
+        <div class="mb-2">
+            <input type="file" name="file" accept=".xlsx,.xlsm" required>
+        </div>
+        <div class="form-check mb-2">
+            <input class="form-check-input" type="checkbox" name="wyzeruj_spoza" id="wyzeruj_spoza">
+            <label class="form-check-label" for="wyzeruj_spoza">
+                Wyzeruj stawki modeli, których nie ma w tym pliku
+                <small class="text-muted d-block">Modele zostaną w bazie (liczą się do planu), ale ich stawka zostanie ustawiona na 0. Zaznacz tylko, gdy wgrywasz pełną, aktualną bazę.</small>
+            </label>
+        </div>
+        <button type="submit" class="btn btn-primary">Załaduj</button>
     </form>
+    <p class="text-muted small mt-2">
+        Oczekiwany układ kolumn: A = grupa towarowa, B = marka, C = model, D = stawka (dane od wiersza 2).
+    </p>
 
     <br><br>
 

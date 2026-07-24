@@ -5,9 +5,9 @@ from .forms import ZadanieForm
 # Rejestracja modelu Produkt w panelu admina
 @admin.register(Produkt)
 class ProduktAdmin(admin.ModelAdmin):
-    list_display = ('model', 'marka', 'grupa_towarowa', 'stawka')
+    list_display = ('model', 'marka', 'grupa_towarowa', 'stawka', 'data_aktualizacji')
     search_fields = ('model', 'marka', 'grupa_towarowa')
-    list_filter = ('marka', 'grupa_towarowa')
+    list_filter = ('marka', 'grupa_towarowa', 'data_aktualizacji')
 
 # Rejestracja modelu Sprzedaz w panelu admina
 admin.site.register(Sprzedaz)

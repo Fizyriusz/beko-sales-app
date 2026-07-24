@@ -1,11 +1,29 @@
+import io
 from datetime import date, timedelta
 from decimal import Decimal
 
+import openpyxl
 from django.contrib.auth.models import User
+from django.core.files.uploadedfile import SimpleUploadedFile
 from django.test import Client, TestCase
 from django.urls import reverse
 
 from .models import Produkt, Sprzedaz, Zadanie, DzienPracy, Alejka, MiejsceProduktu
+
+
+def _xlsx(rows):
+    wb = openpyxl.Workbook()
+    ws = wb.active
+    ws.append(["GRUPA TOWAROWA", "MARKA", "MODEL", "STAWKA"])
+    for r in rows:
+        ws.append(list(r))
+    buf = io.BytesIO()
+    wb.save(buf)
+    buf.seek(0)
+    return SimpleUploadedFile(
+        "baza.xlsx", buf.read(),
+        content_type="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+    )
 
 
 class SmokeRenderTestCase(TestCase):
@@ -128,3 +146,63 @@ class MapaMarketuTestCase(TestCase):
         r2 = self.client.post(reverse("produkty:alejka_usun", args=[self.alejka.id]))
         self.assertEqual(r2.status_code, 302)
         self.assertFalse(Alejka.objects.filter(id=self.alejka.id).exists())
+
+
+class ImportTestCase(TestCase):
+    def setUp(self):
+        self.user = User.objects.create_user(username="imp", password="pass", is_staff=True)
+        self.client = Client()
+        self.client.login(username="imp", password="pass")
+
+    def test_import_normalizuje_i_stempluje_date(self):
+        # istniejacy produkt (jak z auto-utworzenia przy sprzedazy) - WIELKIE litery, stawka 0
+        Produkt.objects.create(model="WHSP70T262P", stawka=Decimal("0"), grupa_towarowa="NIEZNANA", marka="Nieznana")
+        f = _xlsx([("COOLING NF", "whirlpool", "  whsp70t262p ", 60)])  # inny case + spacje
+        r = self.client.post(reverse("produkty:import_excel"), {"file": f})
+        self.assertEqual(r.status_code, 200)
+        self.assertEqual(Produkt.objects.filter(model__iexact="WHSP70T262P").count(), 1)  # brak duplikatu
+        p = Produkt.objects.get(model="WHSP70T262P")
+        self.assertEqual(p.stawka, Decimal("60"))
+        self.assertEqual(p.data_aktualizacji, date.today())
+        self.assertEqual(r.context["liczba_zaktualizowanych"], 1)
+
+    def test_import_tworzy_wielkimi_literami(self):
+        f = _xlsx([("HOOD", "beko", "newmodel1", 45)])
+        self.client.post(reverse("produkty:import_excel"), {"file": f})
+        self.assertTrue(Produkt.objects.filter(model="NEWMODEL1").exists())
+
+    def test_wyzerowanie_spoza_pliku(self):
+        keep = Produkt.objects.create(model="INFILE", stawka=Decimal("50"), grupa_towarowa="X", marka="BEKO")
+        gone = Produkt.objects.create(model="NOTINFILE", stawka=Decimal("50"), grupa_towarowa="X", marka="BEKO")
+        f = _xlsx([("X", "BEKO", "INFILE", 55)])
+        r = self.client.post(reverse("produkty:import_excel"), {"file": f, "wyzeruj_spoza": "on"})
+        keep.refresh_from_db()
+        gone.refresh_from_db()
+        self.assertEqual(keep.stawka, Decimal("55"))
+        self.assertEqual(gone.stawka, Decimal("0"))
+        self.assertTrue(Produkt.objects.filter(model="NOTINFILE").exists())  # nie usuniety
+        self.assertEqual(r.context["wyzerowane"], 1)
+
+    def test_bez_wyzerowania_bez_flagi(self):
+        gone = Produkt.objects.create(model="STAYS", stawka=Decimal("50"), grupa_towarowa="X", marka="BEKO")
+        self.client.post(reverse("produkty:import_excel"), {"file": _xlsx([("X", "BEKO", "OTHER", 55)])})
+        gone.refresh_from_db()
+        self.assertEqual(gone.stawka, Decimal("50"))
+
+
+class ProductDeleteTestCase(TestCase):
+    def setUp(self):
+        self.user = User.objects.create_user(username="del", password="pass", is_staff=True)
+        self.client = Client()
+        self.client.login(username="del", password="pass")
+
+    def test_usun_produkt_ze_sprzedaza(self):
+        p = Produkt.objects.create(model="DELME", stawka=Decimal("10"), grupa_towarowa="X", marka="BEKO")
+        Sprzedaz.objects.create(produkt=p, liczba_sztuk=1, data_sprzedazy=date.today())
+        r = self.client.get(reverse("produkty:product_delete", args=[p.id]))
+        self.assertEqual(r.status_code, 200)
+        self.assertEqual(r.context["liczba_sprzedazy"], 1)
+        r2 = self.client.post(reverse("produkty:product_delete", args=[p.id]))
+        self.assertEqual(r2.status_code, 302)
+        self.assertFalse(Produkt.objects.filter(id=p.id).exists())
+        self.assertEqual(Sprzedaz.objects.filter(produkt_id=p.id).count(), 0)
