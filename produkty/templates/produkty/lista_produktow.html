@@ -75,6 +75,7 @@
                                         <th>Marka</th>
                                         <th>Grupa towarowa</th>
                                         <th>Prowizja (Stawka)</th>
+                                        <th>Aktualizacja</th>
                                         <th>Akcje</th>
                                     </tr>
                                 </thead>
@@ -85,9 +86,11 @@
                                         <td>{{ produkt.marka }}</td>
                                         <td>{{ produkt.grupa_towarowa }}</td>
                                         <td>{{ produkt.stawka }}</td>
+                                        <td><small>{{ produkt.data_aktualizacji|default:"—" }}</small></td>
                                         <td>
                                             <a href="{% url 'produkty:product_edit' produkt.id %}" class="btn btn-sm btn-warning">Edytuj</a>
                                             <a href="{% url 'produkty:historia_sprzedazy_produktu' produkt.id %}" class="btn btn-sm btn-info text-white"><i class="fas fa-history"></i> Historia</a>
+                                            {% if user.is_staff %}<a href="{% url 'produkty:product_delete' produkt.id %}" class="btn btn-sm btn-outline-danger">Usuń</a>{% endif %}
                                         </td>
                                     </tr>
                                     {% endfor %}
@@ -106,6 +109,7 @@
                     <th><a href="?sort=marka&dir={% if sort == 'marka' and dir == 'asc' %}desc{% else %}asc{% endif %}&model={{ model_filter }}&marka={{ marka_filter }}&grupa_towarowa={{ grupa_towarowa_filter }}&prowizja_od={{ prowizja_od }}&prowizja_do={{ prowizja_do }}">Marka</a></th>
                     <th><a href="?sort=grupa_towarowa&dir={% if sort == 'grupa_towarowa' and dir == 'asc' %}desc{% else %}asc{% endif %}&model={{ model_filter }}&marka={{ marka_filter }}&grupa_towarowa={{ grupa_towarowa_filter }}&prowizja_od={{ prowizja_od }}&prowizja_do={{ prowizja_do }}">Grupa towarowa</a></th>
                     <th><a href="?sort=stawka&dir={% if sort == 'stawka' and dir == 'asc' %}desc{% else %}asc{% endif %}&model={{ model_filter }}&marka={{ marka_filter }}&grupa_towarowa={{ grupa_towarowa_filter }}&prowizja_od={{ prowizja_od }}&prowizja_do={{ prowizja_do }}">Prowizja (Stawka)</a></th>
+                    <th>Aktualizacja</th>
                     <th>Akcje</th>
                 </tr>
             </thead>
@@ -116,14 +120,16 @@
                     <td>{{ produkt.marka }}</td>
                     <td>{{ produkt.grupa_towarowa }}</td>
                     <td>{{ produkt.stawka }}</td>
+                    <td><small>{{ produkt.data_aktualizacji|default:"—" }}</small></td>
                     <td>
                         <a href="{% url 'produkty:product_edit' produkt.id %}" class="btn btn-sm btn-warning">Edytuj</a>
                         <a href="{% url 'produkty:historia_sprzedazy_produktu' produkt.id %}" class="btn btn-sm btn-info text-white"><i class="fas fa-history"></i> Historia</a>
+                        {% if user.is_staff %}<a href="{% url 'produkty:product_delete' produkt.id %}" class="btn btn-sm btn-outline-danger">Usuń</a>{% endif %}
                     </td>
                 </tr>
                 {% empty %}
                 <tr class="no-live-hide">
-                    <td colspan="5" class="text-center">Brak produktów spełniających kryteria.</td>
+                    <td colspan="6" class="text-center">Brak produktów spełniających kryteria.</td>
                 </tr>
                 {% endfor %}
             </tbody>
