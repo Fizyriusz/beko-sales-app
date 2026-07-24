@@ -31,6 +31,17 @@
                 {% endif %}
             </div>
 
+            <div class="alert alert-info mt-3 mb-0 small" role="alert">
+                <i class="fas fa-info-circle me-1"></i>
+                Do postępu liczy się sprzedaż <strong>dokładnie tych modeli</strong>, które są przypisane do zadania,
+                i tylko z datą <strong>w okresie {{ zadanie.data_start }} – {{ zadanie.data_koniec }}</strong>.
+                Podobny, ale inny numer modelu (albo sprzedaż z innego dnia) nie zostanie policzona.
+                {% if postep == 0 and ma_sprzedaz_historyczna %}
+                <br><strong>Uwaga:</strong> te modele mają sprzedaż w ostatnim czasie, ale poza okresem zadania —
+                sprawdź daty sprzedaży (kolumna „W okresie zadania" poniżej pokazuje, co wpada w okres).
+                {% endif %}
+            </div>
+
             <hr>
 
             <div class="row">
@@ -78,7 +89,8 @@
                         <thead class="table-light">
                             <tr>
                                 <th>Model z zadania</th>
-                                <th>Sprzedaż (ost. {{ selected_days }} dni)</th>
+                                <th class="text-center">Sprzedaż (ost. {{ selected_days }} dni)</th>
+                                <th class="text-center">W okresie zadania</th>
                             </tr>
                         </thead>
                         <tbody>
@@ -86,6 +98,13 @@
                             <tr class="{% if forloop.counter <= 3 %}table-success{% endif %}">
                                 <td><strong>{{ item.produkt.model }}</strong> ({{ item.produkt.marka }})</td>
                                 <td class="text-center"><strong>{{ item.sztuk }}</strong> szt.</td>
+                                <td class="text-center">
+                                    {% if item.w_okresie %}
+                                    <strong class="text-success">{{ item.w_okresie }}</strong> szt.
+                                    {% else %}
+                                    <span class="text-muted">0</span>
+                                    {% endif %}
+                                </td>
                             </tr>
                             {% endfor %}
                         </tbody>

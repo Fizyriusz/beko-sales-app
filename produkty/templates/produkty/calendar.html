@@ -15,6 +15,11 @@
         </div>
     </div>
 
+    <div class="d-flex flex-wrap gap-3 mb-2 small">
+        <span><span class="badge bg-success">Otwarty</span> dzień pracy otwarty</span>
+        <span><span class="badge bg-secondary">Zamknięty</span> dzień pracy zamknięty</span>
+    </div>
+
     <table class="calendar">
         <thead>
             <tr>
@@ -33,9 +38,18 @@
                 {% for day in week %}
                 <td class="{% if day == 0 %}empty-day{% elif year == today.year and month == today.month and day == today.day %}today{% endif %}">
                     {% if day != 0 %}
-                        {% with sales_data=sales_by_day|get_item:day %}
+                        {% with sales_data=sales_by_day|get_item:day work_data=work_days|get_item:day %}
                             <a href="{% url 'produkty:daily_sales' year month day %}" class="day-link">
                                 <div class="day-number">{{ day }}</div>
+                                {% if work_data %}
+                                <div class="day-status">
+                                    {% if work_data.zamkniety %}
+                                    <span class="badge bg-secondary">Zamknięty</span>
+                                    {% else %}
+                                    <span class="badge bg-success">Otwarty</span>
+                                    {% endif %}
+                                </div>
+                                {% endif %}
                                 {% if sales_data %}
                                 <div class="sales-count">
                                     <strong>Sztuk: {{ sales_data.total_items }}</strong><br>

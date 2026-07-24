@@ -898,15 +898,24 @@ def szczegoly_zadania(request, zadanie_id):
     ).values('produkt').annotate(ilosc=Sum('liczba_sztuk'))
     
     historia_dict = {item['produkt']: item['ilosc'] for item in historyczne_sprzedaze}
-    
+
+    # Sprzedaz DOKLADNIE w okresie zadania, per produkt - to wlasnie liczy sie do postepu.
+    w_okresie_qs = sprzedaz_w_okresie.values('produkt').annotate(ilosc=Sum('liczba_sztuk'))
+    w_okresie_dict = {item['produkt']: item['ilosc'] for item in w_okresie_qs}
+
     analiza_dane = []
     for prod in modele_w_zadaniu:
         sztuk = historia_dict.get(prod.id, 0)
         analiza_dane.append({
             'produkt': prod,
-            'sztuk': sztuk
+            'sztuk': sztuk,
+            'w_okresie': w_okresie_dict.get(prod.id, 0),
         })
     analiza_dane.sort(key=lambda x: x['sztuk'], reverse=True)
+
+    # Wskazowka diagnostyczna: sa sprzedaze modeli zadania w ostatnim okresie,
+    # ale postep = 0 -> najpewniej sprzedaz ma date spoza okresu zadania.
+    ma_sprzedaz_historyczna = any(item['sztuk'] > 0 for item in analiza_dane)
 
     context = {
         'zadanie': zadanie,
@@ -917,6 +926,7 @@ def szczegoly_zadania(request, zadanie_id):
         'prog_2_status': prog_2_status,
         'analiza_dane': analiza_dane,
         'selected_days': days_int,
+        'ma_sprzedaz_historyczna': ma_sprzedaz_historyczna,
     }
 
     return render(request, 'produkty/szczegoly_zadania.html', context)
@@ -1206,6 +1216,16 @@ def calendar_view(request, year=None, month=None):
         } for sale in sales_in_month
     }
 
+    # Status dni pracy (otwarty/zamkniety) dla zalogowanego uzytkownika
+    dni_pracy = DzienPracy.objects.filter(
+        user=request.user, data__year=year, data__month=month
+    )
+    work_days = {
+        dp.data.day: {
+            'zamkniety': dp.czas_zamkniecia is not None,
+        } for dp in dni_pracy
+    }
+
     # Ustawienia kalendarza
     cal = calendar.Calendar()
     month_days = cal.monthdayscalendar(year, month)
@@ -1221,6 +1241,7 @@ def calendar_view(request, year=None, month=None):
         'month_name': calendar.month_name[month],
         'month_days': month_days,
         'sales_by_day': sales_by_day,
+        'work_days': work_days,
         'today': today,
         'prev_year': prev_month_date.year,
         'prev_month': prev_month_date.month,
@@ -1341,6 +1362,17 @@ def lista_produktow(request):
     if not grouped_produkty:
         produkty = produkty.order_by(sort_by)
 
+    # Listy do filtrow rozwijanych (grupy towarowe i marki) - liczone z calej bazy,
+    # nie z przefiltrowanego zbioru, zeby zawsze mozna bylo wybrac dowolna wartosc.
+    dostepne_grupy = (
+        Produkt.objects.exclude(grupa_towarowa__isnull=True).exclude(grupa_towarowa='')
+        .values_list('grupa_towarowa', flat=True).distinct().order_by('grupa_towarowa')
+    )
+    dostepne_marki = (
+        Produkt.objects.exclude(marka__isnull=True).exclude(marka='')
+        .values_list('marka', flat=True).distinct().order_by('marka')
+    )
+
     context = {
         'produkty': produkty,
         'grouped_produkty': grouped_produkty,
@@ -1352,8 +1384,33 @@ def lista_produktow(request):
         'prowizja_do': prowizja_do,
         'sort': request.GET.get('sort', 'model'),
         'dir': request.GET.get('dir', 'asc'),
+        'dostepne_grupy': dostepne_grupy,
+        'dostepne_marki': dostepne_marki,
     }
     return render(request, 'produkty/lista_produktow.html', context)
+
+@staff_member_required
+def grupy_marki_przeglad(request):
+    """Przeglad samych grup towarowych i marek (z licznikami) - do wychwycenia
+    i poprawy blednie zapisanych wartosci. Kazda pozycja linkuje do listy
+    produktow przefiltrowanej po tej wartosci."""
+    grupy = (
+        Produkt.objects.values('grupa_towarowa')
+        .annotate(liczba=Count('id'))
+        .order_by('grupa_towarowa')
+    )
+    marki = (
+        Produkt.objects.values('marka')
+        .annotate(liczba=Count('id'))
+        .order_by('marka')
+    )
+    context = {
+        'grupy': grupy,
+        'marki': marki,
+        'liczba_grup': grupy.count(),
+        'liczba_marek': marki.count(),
+    }
+    return render(request, 'produkty/grupy_marki.html', context)
 
 @login_required
 def product_edit(request, product_id):
