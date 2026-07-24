@@ -5,7 +5,7 @@ from django.contrib.auth.models import User
 from django.test import Client, TestCase
 from django.urls import reverse
 
-from .models import Produkt, Sprzedaz, Zadanie, DzienPracy
+from .models import Produkt, Sprzedaz, Zadanie, DzienPracy, Alejka, MiejsceProduktu
 
 
 class SmokeRenderTestCase(TestCase):
@@ -90,3 +90,41 @@ class ZamianaMarkaGrupaTestCase(TestCase):
         self.ok.refresh_from_db()
         self.assertEqual(self.ok.marka, "WHIRLPOOL")
         self.assertEqual(self.ok.grupa_towarowa, "AGD")
+
+
+class MapaMarketuTestCase(TestCase):
+    def setUp(self):
+        self.staff = User.objects.create_user(username="mapadm", password="pass", is_staff=True)
+        self.client = Client()
+        self.client.login(username="mapadm", password="pass")
+        self.p = Produkt.objects.create(model="LODOWKA1", stawka=Decimal("20"), grupa_towarowa="CHLODNICTWO", marka="BEKO")
+        self.alejka = Alejka.objects.create(nazwa="Alejka Beko", opis="Lodowki", kolejnosc=1)
+
+    def test_mapa_podglad(self):
+        MiejsceProduktu.objects.create(alejka=self.alejka, produkt=self.p, strona="L", pozycja=1)
+        r = self.client.get(reverse("produkty:mapa_marketu"))
+        self.assertEqual(r.status_code, 200)
+        self.assertTrue(r.context["ma_alejki"])
+        self.assertEqual(r.context["alejki_json"][0]["lewa"][0]["model"], "LODOWKA1")
+        self.assertTrue(r.context["alejki_json"][0]["lewa"][0]["is_beko"])
+
+    def test_dodaj_alejke(self):
+        r = self.client.post(reverse("produkty:mapa_zarzadzaj"), {"nazwa": "Nowa", "opis": "", "kolejnosc": 2, "aktywna": "on"})
+        self.assertEqual(r.status_code, 302)
+        self.assertTrue(Alejka.objects.filter(nazwa="Nowa").exists())
+
+    def test_dodaj_i_usun_produkt(self):
+        r = self.client.post(reverse("produkty:miejsce_dodaj", args=[self.alejka.id]), {"produkt": self.p.id, "strona": "P", "pozycja": 3})
+        self.assertEqual(r.status_code, 302)
+        m = MiejsceProduktu.objects.get(alejka=self.alejka, produkt=self.p)
+        self.assertEqual(m.strona, "P")
+        r2 = self.client.post(reverse("produkty:miejsce_usun", args=[m.id]))
+        self.assertEqual(r2.status_code, 302)
+        self.assertFalse(MiejsceProduktu.objects.filter(id=m.id).exists())
+
+    def test_edytuj_i_usun_alejke(self):
+        r = self.client.get(reverse("produkty:alejka_edytuj", args=[self.alejka.id]))
+        self.assertEqual(r.status_code, 200)
+        r2 = self.client.post(reverse("produkty:alejka_usun", args=[self.alejka.id]))
+        self.assertEqual(r2.status_code, 302)
+        self.assertFalse(Alejka.objects.filter(id=self.alejka.id).exists())

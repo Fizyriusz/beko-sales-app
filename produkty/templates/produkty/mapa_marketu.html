@@ -1,0 +1,122 @@
+{% extends "produkty/base.html" %}
+
+{% block title %}Mapa marketu{% endblock %}
+
+{% block content %}
+<div class="container mt-4">
+    <div class="d-flex justify-content-between align-items-center flex-wrap gap-2 mb-3">
+        <h2 class="mb-0">Mapa marketu — widok z lotu ptaka</h2>
+        {% if user.is_staff %}
+        <a href="{% url 'produkty:mapa_zarzadzaj' %}" class="btn btn-outline-primary btn-sm">
+            <i class="fas fa-pen-to-square"></i> Zarządzaj mapą
+        </a>
+        {% endif %}
+    </div>
+
+    {% if not ma_alejki %}
+        <div class="alert alert-info">
+            Brak alejek do wyświetlenia.
+            {% if user.is_staff %}
+            Dodaj pierwszą alejkę w <a href="{% url 'produkty:mapa_zarzadzaj' %}">Zarządzaj mapą</a>.
+            {% endif %}
+        </div>
+    {% else %}
+        <div class="d-flex flex-wrap gap-3 mb-2 small">
+            <span><span style="display:inline-block;width:12px;height:12px;background:#378ADD;border-radius:2px;vertical-align:-1px;"></span> Beko / Grundig</span>
+            <span><span style="display:inline-block;width:12px;height:12px;background:#D85A30;border-radius:2px;vertical-align:-1px;"></span> Pozostałe marki</span>
+            <span class="text-muted">Kliknij alejkę, aby zobaczyć szczegóły.</span>
+        </div>
+
+        <div class="row">
+            <div class="col-lg-8 mb-3">
+                <div style="border:1px solid #ddd;border-radius:10px;background:#fafafa;overflow-x:auto;">
+                    <div id="mapaSvg"></div>
+                </div>
+            </div>
+            <div class="col-lg-4 mb-3">
+                <div id="alejkaPanel" class="card">
+                    <div class="card-body">
+                        <p class="text-muted mb-0"><i class="fas fa-hand-pointer"></i> Kliknij alejkę na mapie.</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+    {% endif %}
+</div>
+
+{{ alejki_json|json_script:"alejki-data" }}
+{% endblock %}
+
+{% block extra_js %}
+<script>
+document.addEventListener('DOMContentLoaded', function () {
+    const el = document.getElementById('alejki-data');
+    if (!el) return;
+    const alejki = JSON.parse(el.textContent);
+    const svgBox = document.getElementById('mapaSvg');
+    const panel = document.getElementById('alejkaPanel');
+
+    const COL = 90, TOP = 40, H = 240, MAXBOX = 6, BOX = 14, GAP = 4;
+    const W = Math.max(alejki.length * COL + 40, 300);
+    const svgH = TOP + H + 40;
+
+    function esc(s){ return (s||'').replace(/[&<>]/g, c=>({'&':'&amp;','<':'&lt;','>':'&gt;'}[c])); }
+
+    function boxes(items, x) {
+        let out = '';
+        items.slice(0, MAXBOX).forEach((p, i) => {
+            const y = TOP + 10 + i * (BOX + GAP);
+            const color = p.is_beko ? '#378ADD' : '#D85A30';
+            out += `<rect x="${x}" y="${y}" width="${BOX}" height="${BOX}" rx="2" fill="${color}"><title>${esc(p.marka)} ${esc(p.model)}</title></rect>`;
+        });
+        if (items.length > MAXBOX) {
+            const y = TOP + 10 + MAXBOX * (BOX + GAP);
+            out += `<text x="${x}" y="${y + 10}" style="font-size:10px;fill:#666;">+${items.length - MAXBOX}</text>`;
+        }
+        return out;
+    }
+
+    let svg = `<svg viewBox="0 0 ${W} ${svgH}" width="100%" style="min-width:${W}px;">`;
+    svg += `<rect x="10" y="18" width="70" height="7" rx="2" fill="#bbb"></rect>`;
+    svg += `<text x="10" y="14" style="font-size:11px;fill:#888;">Wejście</text>`;
+    alejki.forEach((a, idx) => {
+        const cx = 20 + idx * COL;
+        const barX = cx + 30;
+        svg += `<g class="mapa-alejka" data-id="${a.id}" style="cursor:pointer;">`;
+        svg += `<rect x="${cx}" y="${TOP}" width="60" height="${H}" rx="6" fill="#ffffff" stroke="#ccc"></rect>`;
+        svg += `<rect class="bar" x="${barX - 4}" y="${TOP}" width="8" height="${H}" rx="3" fill="#666"></rect>`;
+        svg += boxes(a.lewa, cx + 4);
+        svg += boxes(a.prawa, cx + 42);
+        svg += `<text x="${cx + 30}" y="${TOP + H + 20}" text-anchor="middle" style="font-size:11px;fill:#333;">${esc(a.nazwa.length > 12 ? a.nazwa.slice(0,11)+'…' : a.nazwa)}</text>`;
+        svg += `</g>`;
+    });
+    svg += `</svg>`;
+    svgBox.innerHTML = svg;
+
+    function showPanel(a) {
+        function list(items){
+            if(!items.length) return '<p class="text-muted small mb-2">— brak —</p>';
+            return '<ul class="list-unstyled small mb-2">' + items.map(p =>
+                `<li><span style="color:${p.is_beko?'#185FA5':'#993C1D'};">&#9632;</span> <strong>${esc(p.marka)}</strong> ${esc(p.model)}</li>`
+            ).join('') + '</ul>';
+        }
+        panel.innerHTML = `<div class="card-body">
+            <h5 class="card-title">${esc(a.nazwa)}</h5>
+            <p class="text-muted">${esc(a.opis) || '<em>Brak opisu</em>'}</p>
+            <h6>Lewa strona</h6>${list(a.lewa)}
+            <h6>Prawa strona</h6>${list(a.prawa)}
+        </div>`;
+    }
+
+    document.querySelectorAll('.mapa-alejka').forEach(g => {
+        g.addEventListener('click', () => {
+            document.querySelectorAll('.mapa-alejka .bar').forEach(b => b.setAttribute('fill', '#666'));
+            g.querySelector('.bar').setAttribute('fill', '#185FA5');
+            const id = parseInt(g.getAttribute('data-id'), 10);
+            const a = alejki.find(x => x.id === id);
+            if (a) showPanel(a);
+        });
+    });
+});
+</script>
+{% endblock %}

@@ -7,6 +7,14 @@ urlpatterns = [
     path('produkty/', views.lista_produktow, name='lista_produktow'),
     path('produkty/grupy-marki/', views.grupy_marki_przeglad, name='grupy_marki'),
     path('produkty/zamiana-marka-grupa/', views.zamiana_marka_grupa, name='zamiana_marka_grupa'),
+
+    # Mapa marketu
+    path('mapa/', views.mapa_marketu, name='mapa_marketu'),
+    path('mapa/zarzadzaj/', views.mapa_zarzadzaj, name='mapa_zarzadzaj'),
+    path('mapa/alejka/<int:alejka_id>/edytuj/', views.alejka_edytuj, name='alejka_edytuj'),
+    path('mapa/alejka/<int:alejka_id>/usun/', views.alejka_usun, name='alejka_usun'),
+    path('mapa/alejka/<int:alejka_id>/produkt/dodaj/', views.miejsce_dodaj, name='miejsce_dodaj'),
+    path('mapa/miejsce/<int:miejsce_id>/usun/', views.miejsce_usun, name='miejsce_usun'),
     path('produkty/edit/<int:product_id>/', views.product_edit, name='product_edit'),
     path('', views.home, name='home'),
     path('import/', views.import_excel, name='import_excel'),

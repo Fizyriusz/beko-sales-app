@@ -1,0 +1,20 @@
+{% extends "produkty/base.html" %}
+
+{% block title %}Usuń alejkę{% endblock %}
+
+{% block content %}
+<div class="container mt-4">
+    <div class="card border-danger">
+        <div class="card-header bg-danger text-white">Usuwanie alejki</div>
+        <div class="card-body">
+            <p>Czy na pewno chcesz usunąć alejkę <strong>„{{ alejka.nazwa }}"</strong>?</p>
+            <p class="text-muted">Usunięte zostaną też przypisania produktów do tej alejki ({{ alejka.miejsca.count }}). Sam katalog produktów pozostaje bez zmian.</p>
+            <form method="post">
+                {% csrf_token %}
+                <button type="submit" class="btn btn-danger">Tak, usuń</button>
+                <a href="{% url 'produkty:mapa_zarzadzaj' %}" class="btn btn-secondary">Anuluj</a>
+            </form>
+        </div>
+    </div>
+</div>
+{% endblock %}
