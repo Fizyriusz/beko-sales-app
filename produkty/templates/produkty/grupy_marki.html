@@ -1,0 +1,87 @@
+{% extends "produkty/base.html" %}
+{% load produkty_tags %}
+
+{% block title %}Grupy i marki — przegląd{% endblock %}
+
+{% block content %}
+<div class="container mt-4">
+    <h2>Grupy towarowe i marki — przegląd</h2>
+    <p class="text-muted">
+        Lista wszystkich wartości zapisanych w bazie wraz z liczbą produktów.
+        Służy do wychwycenia błędnie zapisanych wartości (literówki, puste, „NIEZNANA").
+        Kliknij wartość, aby zobaczyć produkty i je poprawić.
+    </p>
+
+    <div class="row">
+        <div class="col-md-6 mb-4">
+            <div class="card">
+                <div class="card-header bg-primary text-white">
+                    <i class="fas fa-layer-group me-1"></i> Grupy towarowe ({{ liczba_grup }})
+                </div>
+                <div class="card-body p-0">
+                    <table class="table table-striped table-hover mb-0">
+                        <thead>
+                            <tr>
+                                <th>Grupa towarowa</th>
+                                <th class="text-center">Produktów</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for g in grupy %}
+                            <tr>
+                                <td>
+                                    {% if g.grupa_towarowa %}
+                                    <a href="{% url 'produkty:lista_produktow' %}?grupa_towarowa={{ g.grupa_towarowa|urlencode }}">{{ g.grupa_towarowa }}</a>
+                                    {% else %}
+                                    <span class="text-danger fst-italic">(puste / brak)</span>
+                                    {% endif %}
+                                </td>
+                                <td class="text-center">{{ g.liczba }}</td>
+                            </tr>
+                            {% empty %}
+                            <tr><td colspan="2" class="text-center">Brak danych.</td></tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+
+        <div class="col-md-6 mb-4">
+            <div class="card">
+                <div class="card-header bg-dark text-white">
+                    <i class="fas fa-tags me-1"></i> Marki ({{ liczba_marek }})
+                </div>
+                <div class="card-body p-0">
+                    <table class="table table-striped table-hover mb-0">
+                        <thead>
+                            <tr>
+                                <th>Marka</th>
+                                <th class="text-center">Produktów</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for m in marki %}
+                            <tr>
+                                <td>
+                                    {% if m.marka %}
+                                    <a href="{% url 'produkty:lista_produktow' %}?marka={{ m.marka|urlencode }}">{{ m.marka }}</a>
+                                    {% else %}
+                                    <span class="text-danger fst-italic">(puste / brak)</span>
+                                    {% endif %}
+                                </td>
+                                <td class="text-center">{{ m.liczba }}</td>
+                            </tr>
+                            {% empty %}
+                            <tr><td colspan="2" class="text-center">Brak danych.</td></tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <a href="{% url 'produkty:lista_produktow' %}" class="btn btn-secondary">← Powrót do listy produktów</a>
+</div>
+{% endblock %}
