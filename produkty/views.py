@@ -8,7 +8,7 @@ from zipfile import BadZipFile
 from decimal import Decimal, InvalidOperation
 import logging
 from django.utils import timezone
-from django.db.models import Sum, Count, F
+from django.db.models import Sum, Count, F, Q
 from collections import defaultdict
 from datetime import timedelta, datetime
 from rapidfuzz import fuzz, process 
@@ -1411,6 +1411,58 @@ def grupy_marki_przeglad(request):
         'liczba_marek': marki.count(),
     }
     return render(request, 'produkty/grupy_marki.html', context)
+
+@staff_member_required
+def zamiana_marka_grupa(request):
+    """Narzedzie admina do masowej zamiany pol marka <-> grupa_towarowa.
+    Czesty problem importu: produkt zapisuje sie jako marka='COOLING',
+    grupa='BEKO' zamiast odwrotnie. Uzytkownik zaznacza grupy i/lub marki,
+    widzi podglad, a dopiero potem potwierdza zamiane."""
+    grupy = (
+        Produkt.objects.exclude(grupa_towarowa__isnull=True).exclude(grupa_towarowa='')
+        .values('grupa_towarowa').annotate(liczba=Count('id')).order_by('grupa_towarowa')
+    )
+    marki = (
+        Produkt.objects.exclude(marka__isnull=True).exclude(marka='')
+        .values('marka').annotate(liczba=Count('id')).order_by('marka')
+    )
+    context = {'grupy': grupy, 'marki': marki}
+
+    if request.method == 'POST':
+        wybrane_grupy = request.POST.getlist('grupa')
+        wybrane_marki = request.POST.getlist('marka')
+        akcja = request.POST.get('akcja')
+
+        if not wybrane_grupy and not wybrane_marki:
+            messages.error(request, "Nie zaznaczono żadnej grupy ani marki.")
+            return render(request, 'produkty/zamiana_marka_grupa.html', context)
+
+        # Produkty pasujace po WYBRANEJ grupie LUB po wybranej marce.
+        q = Q()
+        if wybrane_grupy:
+            q |= Q(grupa_towarowa__in=wybrane_grupy)
+        if wybrane_marki:
+            q |= Q(marka__in=wybrane_marki)
+        produkty_do_zmiany = Produkt.objects.filter(q).order_by('model')
+
+        context['wybrane_grupy'] = wybrane_grupy
+        context['wybrane_marki'] = wybrane_marki
+
+        if akcja == 'zamien':
+            count = 0
+            for p in produkty_do_zmiany:
+                p.marka, p.grupa_towarowa = p.grupa_towarowa, p.marka
+                p.save(update_fields=['marka', 'grupa_towarowa'])
+                count += 1
+            messages.success(request, f"Zamieniono markę z grupą towarową dla {count} produktów.")
+            return redirect('produkty:zamiana_marka_grupa')
+
+        # akcja == 'podglad'
+        context['pokaz_podglad'] = True
+        context['podglad'] = produkty_do_zmiany
+        context['liczba_podglad'] = produkty_do_zmiany.count()
+
+    return render(request, 'produkty/zamiana_marka_grupa.html', context)
 
 @login_required
 def product_edit(request, product_id):

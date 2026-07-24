@@ -1,0 +1,99 @@
+{% extends "produkty/base.html" %}
+
+{% block title %}Zamiana marka ↔ grupa{% endblock %}
+
+{% block content %}
+<div class="container mt-4">
+    <h2>Zamiana: marka ↔ grupa towarowa</h2>
+    <div class="alert alert-warning">
+        <i class="fas fa-triangle-exclamation me-1"></i>
+        Narzędzie do naprawy błędnych importów, gdzie marka i grupa trafiły w odwrotne pola
+        (np. <code>marka=COOLING, grupa=BEKO</code> zamiast <code>marka=BEKO, grupa=COOLING</code>).
+        Zaznacz grupy i/lub marki, których produkty chcesz naprawić, kliknij <strong>Podgląd</strong>,
+        a po sprawdzeniu — <strong>Potwierdź zamianę</strong>. Produkty pasujące do zaznaczonej grupy
+        <u>lub</u> marki zostaną objęte zamianą.
+    </div>
+
+    <form method="post">
+        {% csrf_token %}
+        <div class="row">
+            <div class="col-md-6 mb-3">
+                <div class="card">
+                    <div class="card-header bg-primary text-white">Grupy towarowe</div>
+                    <div class="card-body" style="max-height: 320px; overflow-y: auto;">
+                        {% for g in grupy %}
+                        <div class="form-check">
+                            <input class="form-check-input" type="checkbox" name="grupa" value="{{ g.grupa_towarowa }}"
+                                   id="grupa-{{ forloop.counter }}"
+                                   {% if g.grupa_towarowa in wybrane_grupy %}checked{% endif %}>
+                            <label class="form-check-label" for="grupa-{{ forloop.counter }}">
+                                {{ g.grupa_towarowa }} <span class="badge bg-secondary">{{ g.liczba }}</span>
+                            </label>
+                        </div>
+                        {% endfor %}
+                    </div>
+                </div>
+            </div>
+            <div class="col-md-6 mb-3">
+                <div class="card">
+                    <div class="card-header bg-dark text-white">Marki</div>
+                    <div class="card-body" style="max-height: 320px; overflow-y: auto;">
+                        {% for m in marki %}
+                        <div class="form-check">
+                            <input class="form-check-input" type="checkbox" name="marka" value="{{ m.marka }}"
+                                   id="marka-{{ forloop.counter }}"
+                                   {% if m.marka in wybrane_marki %}checked{% endif %}>
+                            <label class="form-check-label" for="marka-{{ forloop.counter }}">
+                                {{ m.marka }} <span class="badge bg-secondary">{{ m.liczba }}</span>
+                            </label>
+                        </div>
+                        {% endfor %}
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <button type="submit" name="akcja" value="podglad" class="btn btn-primary">
+            <i class="fas fa-eye me-1"></i> Podgląd
+        </button>
+
+        {% if pokaz_podglad %}
+            <hr>
+            <h4>Podgląd zmian ({{ liczba_podglad }} produktów)</h4>
+            {% if liczba_podglad %}
+            <p class="text-muted small">Sprawdź, czy to na pewno te produkty. Kolumny „po zamianie" pokazują wynik.</p>
+            <button type="submit" name="akcja" value="zamien" class="btn btn-danger mb-3"
+                    onclick="return confirm('Na pewno zamienić markę z grupą dla {{ liczba_podglad }} produktów? Tej operacji nie cofniesz automatycznie.');">
+                <i class="fas fa-right-left me-1"></i> Potwierdź zamianę ({{ liczba_podglad }})
+            </button>
+            <div class="table-responsive">
+                <table class="table table-sm table-bordered table-striped">
+                    <thead class="table-dark">
+                        <tr>
+                            <th>Model</th>
+                            <th>Marka (teraz)</th>
+                            <th>Grupa (teraz)</th>
+                            <th class="text-success">Marka (po zamianie)</th>
+                            <th class="text-success">Grupa (po zamianie)</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for p in podglad %}
+                        <tr>
+                            <td>{{ p.model }}</td>
+                            <td>{{ p.marka }}</td>
+                            <td>{{ p.grupa_towarowa }}</td>
+                            <td class="text-success"><strong>{{ p.grupa_towarowa }}</strong></td>
+                            <td class="text-success"><strong>{{ p.marka }}</strong></td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+            {% else %}
+            <p class="text-muted">Żaden produkt nie pasuje do zaznaczonych grup/marek.</p>
+            {% endif %}
+        {% endif %}
+    </form>
+</div>
+{% endblock %}

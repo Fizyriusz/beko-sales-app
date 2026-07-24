@@ -55,3 +55,38 @@ class SmokeRenderTestCase(TestCase):
         self.assertEqual(r.status_code, 200)
         self.assertEqual(r.context["postep"], 2)
         self.assertTrue(r.context["ma_sprzedaz_historyczna"])
+
+
+class ZamianaMarkaGrupaTestCase(TestCase):
+    def setUp(self):
+        self.user = User.objects.create_user(username="adm", password="pass", is_staff=True)
+        self.client = Client()
+        self.client.login(username="adm", password="pass")
+        # zle zaimportowany produkt: marka i grupa zamienione miejscami
+        self.p = Produkt.objects.create(model="ZLE1", stawka=Decimal("10"), grupa_towarowa="BEKO", marka="COOLING")
+        # poprawny produkt - nie powinien zostac ruszony
+        self.ok = Produkt.objects.create(model="OK1", stawka=Decimal("10"), grupa_towarowa="AGD", marka="WHIRLPOOL")
+
+    def test_get_renders(self):
+        r = self.client.get(reverse("produkty:zamiana_marka_grupa"))
+        self.assertEqual(r.status_code, 200)
+        self.assertNotIn("pokaz_podglad", r.context)
+
+    def test_preview_does_not_mutate(self):
+        r = self.client.post(reverse("produkty:zamiana_marka_grupa"), {"akcja": "podglad", "grupa": ["BEKO"]})
+        self.assertEqual(r.status_code, 200)
+        self.assertEqual(r.context["liczba_podglad"], 1)
+        self.p.refresh_from_db()
+        self.assertEqual(self.p.marka, "COOLING")  # bez zmian
+        self.assertEqual(self.p.grupa_towarowa, "BEKO")
+
+    def test_swap_applies(self):
+        r = self.client.post(reverse("produkty:zamiana_marka_grupa"), {"akcja": "zamien", "grupa": ["BEKO"]})
+        self.assertEqual(r.status_code, 302)
+        self.p.refresh_from_db()
+        self.assertEqual(self.p.marka, "BEKO")
+        self.assertEqual(self.p.grupa_towarowa, "COOLING")
+        # niezaznaczony produkt bez zmian
+        self.ok.refresh_from_db()
+        self.assertEqual(self.ok.marka, "WHIRLPOOL")
+        self.assertEqual(self.ok.grupa_towarowa, "AGD")
