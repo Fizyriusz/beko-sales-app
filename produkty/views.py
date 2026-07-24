@@ -181,17 +181,33 @@ def _zapisz_sprzedaz_i_zadania(zatwierdzone_modele, data_sprzedazy, nowe_modele_
             liczba_sztuk=1
         )
 
-        wszystkie_zadania = Zadanie.objects.filter(data_start__lte=data_sprzedazy, data_koniec__gte=data_sprzedazy)
+        # Tylko zadania obejmujace ten produkt i aktywne w dniu sprzedazy.
+        wszystkie_zadania = Zadanie.objects.filter(
+            data_start__lte=data_sprzedazy,
+            data_koniec__gte=data_sprzedazy,
+            produkty=produkt,
+        )
         for zadanie in wszystkie_zadania:
-            if produkt in zadanie.produkty.all():
+            if (zadanie.typ == 'MIX_MNOZNIK'
+                    and zadanie.mnoznik_mix is not None
+                    and zadanie.prog_mix is not None):
                 sprzedane = Sprzedaz.objects.filter(
                     produkt__in=zadanie.produkty.all(),
                     data_sprzedazy__range=[zadanie.data_start, zadanie.data_koniec]
                 ).aggregate(models.Sum('liczba_sztuk'))['liczba_sztuk__sum'] or 0
 
-                if zadanie.typ == 'MIX_MNOZNIK' and sprzedane >= zadanie.prog_mix:
-                    sprzedaz.prowizja = produkt.stawka * zadanie.mnoznik_mix
-                    sprzedaz.save()
+                if sprzedane >= zadanie.prog_mix:
+                    # Prog osiagniety - nalicz bonus mnoznika dla wszystkich
+                    # sprzedazy objetych zadaniem (takze wczesniejszych).
+                    sprzedaze_zadania = Sprzedaz.objects.filter(
+                        produkt__in=zadanie.produkty.all(),
+                        data_sprzedazy__range=[zadanie.data_start, zadanie.data_koniec]
+                    ).select_related('produkt')
+                    for s in sprzedaze_zadania:
+                        bonus = s.produkt.stawka * zadanie.mnoznik_mix
+                        if s.prowizja != bonus:
+                            s.prowizja = bonus
+                            s.save(update_fields=['prowizja'])
 
 
 @login_required
@@ -321,9 +337,11 @@ def podsumowanie_sprzedazy(request):
     if marka_nazwa:
         sprzedaz_qs = sprzedaz_qs.filter(produkt__marka__icontains=marka_nazwa)
 
-    # Annotate with the commission for each sale
+    # Annotate with the commission for each sale.
+    # Prowizja = baza (liczba_sztuk * stawka) + bonus z zadan (pole prowizja),
+    # spojnie z widokiem dziennym (daily_sales_view).
     sprzedaz_annotated = sprzedaz_qs.annotate(
-        obliczona_prowizja=models.F('liczba_sztuk') * models.F('produkt__stawka')
+        obliczona_prowizja=models.F('liczba_sztuk') * models.F('produkt__stawka') + models.F('prowizja')
     )
 
     sprzedaz_podsumowanie = (
@@ -694,11 +712,16 @@ def zadania_management(request):
 @login_required
 def zadania_view(request, year, month):
     """Widok do wyświetlania zadań w ujęciu miesięcznym"""
+    first_day_of_month = datetime(year, month, 1)
+    last_day_of_month = (first_day_of_month + timedelta(days=32)).replace(day=1) - timedelta(days=1)
+
+    # Zadanie pokazujemy w danym miesiacu, jesli jego okres nachodzi na ten
+    # miesiac (obsluguje zadania rozpiete na przelomie miesiecy).
     zadania = Zadanie.objects.filter(
-        data_start__year=year, data_start__month=month
+        data_start__lte=last_day_of_month,
+        data_koniec__gte=first_day_of_month,
     ).order_by('-data_start')
 
-    first_day_of_month = datetime(year, month, 1)
     prev_month_date = first_day_of_month - timedelta(days=1)
     next_month_date = (first_day_of_month + timedelta(days=32)).replace(day=1)
 
