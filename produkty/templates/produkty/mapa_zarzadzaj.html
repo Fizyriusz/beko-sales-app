@@ -1,0 +1,81 @@
+{% extends "produkty/base.html" %}
+
+{% block title %}Zarządzaj mapą marketu{% endblock %}
+
+{% block content %}
+<div class="container mt-4">
+    <div class="d-flex justify-content-between align-items-center flex-wrap gap-2 mb-3">
+        <h2 class="mb-0">Zarządzaj mapą marketu</h2>
+        <a href="{% url 'produkty:mapa_marketu' %}" class="btn btn-outline-secondary btn-sm">
+            <i class="fas fa-eye"></i> Podgląd mapy
+        </a>
+    </div>
+
+    <div class="row">
+        <div class="col-md-4 mb-3">
+            <div class="card">
+                <div class="card-header bg-primary text-white">Dodaj alejkę</div>
+                <div class="card-body">
+                    <form method="post">
+                        {% csrf_token %}
+                        <div class="mb-2">
+                            <label class="form-label">Nazwa</label>
+                            {{ form.nazwa }}
+                        </div>
+                        <div class="mb-2">
+                            <label class="form-label">Opis</label>
+                            {{ form.opis }}
+                        </div>
+                        <div class="mb-2">
+                            <label class="form-label">Kolejność na mapie</label>
+                            {{ form.kolejnosc }}
+                        </div>
+                        <div class="form-check mb-3">
+                            {{ form.aktywna }}
+                            <label class="form-check-label">Aktywna (widoczna na mapie)</label>
+                        </div>
+                        <button type="submit" class="btn btn-primary w-100">Dodaj alejkę</button>
+                    </form>
+                </div>
+            </div>
+        </div>
+
+        <div class="col-md-8 mb-3">
+            <div class="card">
+                <div class="card-header bg-dark text-white">Alejki ({{ alejki|length }})</div>
+                <div class="card-body p-0">
+                    <table class="table table-striped mb-0 align-middle">
+                        <thead>
+                            <tr>
+                                <th>Kol.</th>
+                                <th>Nazwa</th>
+                                <th class="text-center">Produktów</th>
+                                <th class="text-center">Aktywna</th>
+                                <th class="text-end">Akcje</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for a in alejki %}
+                            <tr>
+                                <td>{{ a.kolejnosc }}</td>
+                                <td>{{ a.nazwa }}</td>
+                                <td class="text-center">{{ a.miejsca.count }}</td>
+                                <td class="text-center">
+                                    {% if a.aktywna %}<span class="badge bg-success">Tak</span>{% else %}<span class="badge bg-secondary">Nie</span>{% endif %}
+                                </td>
+                                <td class="text-end">
+                                    <a href="{% url 'produkty:alejka_edytuj' a.id %}" class="btn btn-sm btn-warning">Edytuj / produkty</a>
+                                    <a href="{% url 'produkty:alejka_usun' a.id %}" class="btn btn-sm btn-danger">Usuń</a>
+                                </td>
+                            </tr>
+                            {% empty %}
+                            <tr><td colspan="5" class="text-center">Brak alejek. Dodaj pierwszą po lewej.</td></tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

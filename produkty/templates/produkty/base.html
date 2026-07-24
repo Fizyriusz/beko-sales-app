@@ -82,6 +82,7 @@
                     <a href="#" class="submenu-toggle"><i class="fas fa-info-circle"></i> Inne <i class="fas fa-chevron-down float-end"></i></a>
                     <ul class="submenu">
                         <li><a href="{% url 'produkty:klienci' %}">Licznik klientów</a></li>
+                        <li><a href="{% url 'produkty:mapa_marketu' %}">Mapa marketu</a></li>
                         <li><a href="{% url 'produkty:hub_wiedzy' %}">Hub Wiedzy</a></li>
                         <li><a href="{% url 'produkty:checklista_podglad' %}">Bieżąca Checklista</a></li>
                         {% if user.is_staff %}

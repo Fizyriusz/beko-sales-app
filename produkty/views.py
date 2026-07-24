@@ -1,7 +1,7 @@
 from django.shortcuts import render, redirect, get_object_or_404
 from django.contrib import messages
-from .models import Produkt, Sprzedaz, Zadanie, Ekspozycja, GrupaProduktowa, Marka, KlientCounter, DzienPracy, GrafikPracy, PunktChecklisty, OdpowiedzChecklisty, TopGroup, TopSubGroup, TopListEntry
-from .forms import ZadanieForm, ProduktForm
+from .models import Produkt, Sprzedaz, Zadanie, Ekspozycja, GrupaProduktowa, Marka, KlientCounter, DzienPracy, GrafikPracy, PunktChecklisty, OdpowiedzChecklisty, TopGroup, TopSubGroup, TopListEntry, Alejka, MiejsceProduktu
+from .forms import ZadanieForm, ProduktForm, AlejkaForm
 import openpyxl
 from openpyxl.utils.exceptions import InvalidFileException
 from zipfile import BadZipFile
@@ -1463,6 +1463,108 @@ def zamiana_marka_grupa(request):
         context['liczba_podglad'] = produkty_do_zmiany.count()
 
     return render(request, 'produkty/zamiana_marka_grupa.html', context)
+
+
+# ==== Mapa marketu (Faza 1 - widok 2D z lotu ptaka) ====
+
+MARKI_BEKO = {'BEKO', 'GRUNDIG'}
+
+@login_required
+def mapa_marketu(request):
+    """Podglad wszystkich alejek z lotu ptaka + szczegoly (opis, produkty)."""
+    alejki = Alejka.objects.filter(aktywna=True).prefetch_related('miejsca__produkt')
+
+    def _strona(alejka, strona):
+        return [
+            {
+                'marka': m.produkt.marka or '',
+                'model': m.produkt.model,
+                'is_beko': (m.produkt.marka or '').upper() in MARKI_BEKO,
+            }
+            for m in alejka.miejsca.all() if m.strona == strona
+        ]
+
+    alejki_json = [
+        {
+            'id': a.id,
+            'nazwa': a.nazwa,
+            'opis': a.opis,
+            'lewa': _strona(a, 'L'),
+            'prawa': _strona(a, 'P'),
+        }
+        for a in alejki
+    ]
+    return render(request, 'produkty/mapa_marketu.html', {
+        'alejki_json': alejki_json,
+        'ma_alejki': bool(alejki_json),
+    })
+
+@staff_member_required
+def mapa_zarzadzaj(request):
+    """Lista alejek + dodawanie nowej alejki."""
+    if request.method == 'POST':
+        form = AlejkaForm(request.POST)
+        if form.is_valid():
+            form.save()
+            messages.success(request, "Dodano alejkę.")
+            return redirect('produkty:mapa_zarzadzaj')
+    else:
+        form = AlejkaForm()
+    alejki = Alejka.objects.all().prefetch_related('miejsca')
+    return render(request, 'produkty/mapa_zarzadzaj.html', {'form': form, 'alejki': alejki})
+
+@staff_member_required
+def alejka_edytuj(request, alejka_id):
+    """Edycja alejki oraz zarzadzanie produktami w niej."""
+    alejka = get_object_or_404(Alejka, id=alejka_id)
+    if request.method == 'POST':
+        form = AlejkaForm(request.POST, instance=alejka)
+        if form.is_valid():
+            form.save()
+            messages.success(request, "Zapisano alejkę.")
+            return redirect('produkty:alejka_edytuj', alejka_id=alejka.id)
+    else:
+        form = AlejkaForm(instance=alejka)
+    return render(request, 'produkty/alejka_edytuj.html', {
+        'alejka': alejka,
+        'form': form,
+        'produkty': Produkt.objects.order_by('model'),
+        'miejsca': alejka.miejsca.select_related('produkt').all(),
+    })
+
+@staff_member_required
+def alejka_usun(request, alejka_id):
+    alejka = get_object_or_404(Alejka, id=alejka_id)
+    if request.method == 'POST':
+        alejka.delete()
+        messages.success(request, "Usunięto alejkę.")
+        return redirect('produkty:mapa_zarzadzaj')
+    return render(request, 'produkty/alejka_usun.html', {'alejka': alejka})
+
+@staff_member_required
+def miejsce_dodaj(request, alejka_id):
+    alejka = get_object_or_404(Alejka, id=alejka_id)
+    if request.method == 'POST':
+        produkt = get_object_or_404(Produkt, id=request.POST.get('produkt'))
+        strona = request.POST.get('strona', 'L')
+        if strona not in ('L', 'P'):
+            strona = 'L'
+        try:
+            pozycja = int(request.POST.get('pozycja') or 0)
+        except (TypeError, ValueError):
+            pozycja = 0
+        MiejsceProduktu.objects.create(alejka=alejka, produkt=produkt, strona=strona, pozycja=pozycja)
+        messages.success(request, "Dodano produkt do alejki.")
+    return redirect('produkty:alejka_edytuj', alejka_id=alejka.id)
+
+@staff_member_required
+def miejsce_usun(request, miejsce_id):
+    miejsce = get_object_or_404(MiejsceProduktu, id=miejsce_id)
+    alejka_id = miejsce.alejka_id
+    if request.method == 'POST':
+        miejsce.delete()
+        messages.success(request, "Usunięto produkt z alejki.")
+    return redirect('produkty:alejka_edytuj', alejka_id=alejka_id)
 
 @login_required
 def product_edit(request, product_id):

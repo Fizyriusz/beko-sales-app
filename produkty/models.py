@@ -177,4 +177,40 @@ class TopListEntry(models.Model):
         unique_together = ('user', 'subgrupa', 'pozycja')
 
     def __str__(self):
-        return f"{self.user.username} - {self.subgrupa} - #{self.pozycja}: {self.model_tekst}"
+        return f"{self.user.username} - {self.subgrupa} - #{self.pozycja}: {self.model_tekst}"
+
+
+class Alejka(models.Model):
+    """Alejka w markecie - element mapy z lotu ptaka (Faza 1 wizualizacji)."""
+    nazwa = models.CharField(max_length=150, verbose_name="Nazwa alejki")
+    opis = models.TextField(blank=True, verbose_name="Opis")
+    kolejnosc = models.IntegerField(default=0, verbose_name="Kolejność na mapie")
+    aktywna = models.BooleanField(default=True, verbose_name="Aktywna")
+
+    class Meta:
+        ordering = ['kolejnosc', 'nazwa']
+        verbose_name = "Alejka"
+        verbose_name_plural = "Alejki"
+
+    def __str__(self):
+        return self.nazwa
+
+
+class MiejsceProduktu(models.Model):
+    """Produkt ustawiony w konkretnej alejce (strona + pozycja)."""
+    class Strona(models.TextChoices):
+        LEWA = "L", "Lewa"
+        PRAWA = "P", "Prawa"
+
+    alejka = models.ForeignKey(Alejka, on_delete=models.CASCADE, related_name='miejsca')
+    produkt = models.ForeignKey(Produkt, on_delete=models.CASCADE, related_name='miejsca')
+    strona = models.CharField(max_length=1, choices=Strona.choices, default=Strona.LEWA)
+    pozycja = models.PositiveIntegerField(default=0, verbose_name="Pozycja w alejce")
+
+    class Meta:
+        ordering = ['strona', 'pozycja']
+        verbose_name = "Miejsce produktu"
+        verbose_name_plural = "Miejsca produktów"
+
+    def __str__(self):
+        return f"{self.alejka.nazwa} [{self.get_strona_display()}#{self.pozycja}]: {self.produkt.model}"

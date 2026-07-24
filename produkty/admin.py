@@ -3,7 +3,11 @@ from .models import Produkt, Sprzedaz, Zadanie, GrupaProduktowa, Marka, Ekspozyc
 from .forms import ZadanieForm
 
 # Rejestracja modelu Produkt w panelu admina
-admin.site.register(Produkt)
+@admin.register(Produkt)
+class ProduktAdmin(admin.ModelAdmin):
+    list_display = ('model', 'marka', 'grupa_towarowa', 'stawka')
+    search_fields = ('model', 'marka', 'grupa_towarowa')
+    list_filter = ('marka', 'grupa_towarowa')
 
 # Rejestracja modelu Sprzedaz w panelu admina
 admin.site.register(Sprzedaz)
@@ -51,3 +55,16 @@ from .models import TopGroup, TopSubGroup, TopListEntry
 admin.site.register(TopGroup)
 admin.site.register(TopSubGroup)
 admin.site.register(TopListEntry)
+
+from .models import Alejka, MiejsceProduktu
+
+class MiejsceProduktuInline(admin.TabularInline):
+    model = MiejsceProduktu
+    extra = 1
+    autocomplete_fields = ('produkt',)
+
+@admin.register(Alejka)
+class AlejkaAdmin(admin.ModelAdmin):
+    list_display = ('nazwa', 'kolejnosc', 'aktywna')
+    list_editable = ('kolejnosc', 'aktywna')
+    inlines = [MiejsceProduktuInline]

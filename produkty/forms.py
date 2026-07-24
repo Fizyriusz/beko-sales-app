@@ -116,3 +116,17 @@ class PodpowiedzForm(forms.ModelForm):
             'tytul': forms.TextInput(attrs={'class': 'form-control'}),
             'tresc': forms.Textarea(attrs={'class': 'form-control', 'rows': 10}),
         }
+
+
+from .models import Alejka
+
+class AlejkaForm(forms.ModelForm):
+    class Meta:
+        model = Alejka
+        fields = ['nazwa', 'opis', 'kolejnosc', 'aktywna']
+        widgets = {
+            'nazwa': forms.TextInput(attrs={'class': 'form-control'}),
+            'opis': forms.Textarea(attrs={'class': 'form-control', 'rows': 3}),
+            'kolejnosc': forms.NumberInput(attrs={'class': 'form-control'}),
+            'aktywna': forms.CheckboxInput(attrs={'class': 'form-check-input'}),
+        }
