@@ -17,6 +17,7 @@ urlpatterns = [
     path('mapa/miejsce/<int:miejsce_id>/usun/', views.miejsce_usun, name='miejsce_usun'),
     path('produkty/edit/<int:product_id>/', views.product_edit, name='product_edit'),
     path('produkty/delete/<int:product_id>/', views.product_delete, name='product_delete'),
+    path('produkty/polacz/', views.polacz_produkty, name='polacz_produkty'),
     path('', views.home, name='home'),
     path('import/', views.import_excel, name='import_excel'),
     path('test/', views.test_template, name='test_template'),

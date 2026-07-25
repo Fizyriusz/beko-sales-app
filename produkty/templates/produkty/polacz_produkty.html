@@ -1,0 +1,73 @@
+{% extends "produkty/base.html" %}
+
+{% block title %}Połącz duplikaty produktów{% endblock %}
+
+{% block content %}
+<div class="container mt-4">
+    <h2>Połącz duplikaty produktów</h2>
+    <div class="alert alert-info">
+        <i class="fas fa-circle-info me-1"></i>
+        Narzędzie łączy dwa wpisy tego samego produktu (np. z literówką lub niepełną nazwą).
+        Cała historia sprzedaży (oraz przypisania do zadań, funkcji i mapy) zostanie
+        <strong>przeniesiona z produktu źródłowego na docelowy</strong>, a źródłowy zostanie usunięty.
+        Historia nie ginie — zmienia tylko właściciela.
+    </div>
+
+    <form method="post">
+        {% csrf_token %}
+        <div class="row">
+            <div class="col-md-6 mb-3">
+                <label class="form-label"><strong>Produkt źródłowy</strong> (błędny — zostanie usunięty)</label>
+                <select name="source" class="form-select" required>
+                    <option value="">— wybierz —</option>
+                    {% for p in produkty %}
+                    <option value="{{ p.id }}" {% if source and p.id == source.id %}selected{% endif %}>
+                        {{ p.model }} ({{ p.marka }}) — {{ p.liczba_sprzedazy }} sprzedaży
+                    </option>
+                    {% endfor %}
+                </select>
+            </div>
+            <div class="col-md-6 mb-3">
+                <label class="form-label"><strong>Produkt docelowy</strong> (poprawny — zostaje)</label>
+                <select name="target" class="form-select" required>
+                    <option value="">— wybierz —</option>
+                    {% for p in produkty %}
+                    <option value="{{ p.id }}" {% if target and p.id == target.id %}selected{% endif %}>
+                        {{ p.model }} ({{ p.marka }}) — {{ p.liczba_sprzedazy }} sprzedaży
+                    </option>
+                    {% endfor %}
+                </select>
+            </div>
+        </div>
+
+        <button type="submit" name="akcja" value="podglad" class="btn btn-primary">
+            <i class="fas fa-eye me-1"></i> Podgląd
+        </button>
+
+        {% if pokaz_podglad %}
+            <hr>
+            <h4>Podgląd połączenia</h4>
+            <table class="table table-bordered w-auto">
+                <tr>
+                    <th>Źródłowy (do usunięcia)</th>
+                    <td>{{ source.model }} ({{ source.marka }})</td>
+                    <td><span class="badge bg-secondary">{{ source_sprzedaz }} sprzedaży</span></td>
+                </tr>
+                <tr>
+                    <th>Docelowy (zostaje)</th>
+                    <td>{{ target.model }} ({{ target.marka }})</td>
+                    <td><span class="badge bg-secondary">{{ target_sprzedaz }} sprzedaży</span></td>
+                </tr>
+                <tr class="table-success">
+                    <th>Po połączeniu docelowy będzie miał</th>
+                    <td colspan="2"><strong>{{ target.model }}</strong>: {{ source_sprzedaz }} + {{ target_sprzedaz }} sprzedaży</td>
+                </tr>
+            </table>
+            <button type="submit" name="akcja" value="polacz" class="btn btn-danger"
+                    onclick="return confirm('Połączyć „{{ source.model }}” w „{{ target.model }}”? Źródłowy zostanie usunięty, a jego {{ source_sprzedaz }} sprzedaży przeniesione.');">
+                <i class="fas fa-code-merge me-1"></i> Potwierdź połączenie
+            </button>
+        {% endif %}
+    </form>
+</div>
+{% endblock %}

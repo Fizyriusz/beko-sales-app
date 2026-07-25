@@ -9,9 +9,12 @@
     </div>
 
     <div class="card shadow-sm mb-4">
-        <div class="card-header bg-primary text-white d-flex justify-content-between align-items-center">
+        <div class="card-header bg-primary text-white d-flex justify-content-between align-items-center flex-wrap gap-2">
             <h3 class="mb-0">Historia sprzedaży: {{ produkt.model }} ({{ produkt.marka }})</h3>
-            <span class="badge bg-light text-dark fs-5">Zaraportowano łącznie: {{ suma_sztuk }} szt.</span>
+            <div class="d-flex gap-2 flex-wrap">
+                <span class="badge bg-light text-dark fs-6">Sztuk łącznie: {{ suma_sztuk }}</span>
+                <span class="badge bg-success fs-6">Prowizja łącznie: {{ suma_prowizji|floatformat:2 }} PLN</span>
+            </div>
         </div>
         <div class="card-body">
             {% if sprzedaz_list %}
@@ -31,7 +34,10 @@
                             <td>{{ sprzedaz.data_sprzedazy }}</td>
                             <td><strong>{{ sprzedaz.liczba_sztuk }}</strong></td>
                             <td>{% if sprzedaz.zadanie %}{{ sprzedaz.zadanie.nazwa }}{% else %}-{% endif %}</td>
-                            <td>{{ sprzedaz.prowizja }} PLN</td>
+                            <td>
+                                {{ sprzedaz.prowizja_za_sztuke|floatformat:2 }} PLN
+                                {% if sprzedaz.prowizja %}<span class="badge bg-warning text-dark ms-1" title="w tym bonus z zadania">+{{ sprzedaz.prowizja|floatformat:2 }} bonus</span>{% endif %}
+                            </td>
                         </tr>
                         {% endfor %}
                     </tbody>

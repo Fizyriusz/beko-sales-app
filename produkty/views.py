@@ -1626,6 +1626,57 @@ def product_delete(request, product_id):
         'liczba_sprzedazy': liczba_sprzedazy,
     })
 
+@staff_member_required
+def polacz_produkty(request):
+    """Laczenie duplikatow: przenosi historie sprzedazy (oraz przypisania do
+    zadan, funkcji i mapy) z produktu zrodlowego na docelowy, po czym usuwa
+    zrodlowy. Dwuetapowo: podglad -> potwierdzenie."""
+    produkty = Produkt.objects.annotate(liczba_sprzedazy=Count('sprzedaz')).order_by('model')
+    context = {'produkty': produkty}
+
+    if request.method == 'POST':
+        source_id = request.POST.get('source')
+        target_id = request.POST.get('target')
+        akcja = request.POST.get('akcja')
+
+        if not source_id or not target_id:
+            messages.error(request, "Wybierz oba produkty (źródłowy i docelowy).")
+            return render(request, 'produkty/polacz_produkty.html', context)
+        if source_id == target_id:
+            messages.error(request, "Produkt źródłowy i docelowy muszą być różne.")
+            return render(request, 'produkty/polacz_produkty.html', context)
+
+        source = get_object_or_404(Produkt, id=source_id)
+        target = get_object_or_404(Produkt, id=target_id)
+        source_sprzedaz = Sprzedaz.objects.filter(produkt=source).count()
+
+        if akcja == 'polacz':
+            Sprzedaz.objects.filter(produkt=source).update(produkt=target)
+            for z in source.zadania.all():
+                z.produkty.add(target)
+            for f in source.funkcje.all():
+                f.produkty.add(target)
+            MiejsceProduktu.objects.filter(produkt=source).update(produkt=target)
+            source_model = source.model
+            source.delete()
+            messages.success(
+                request,
+                f"Połączono: {source_model} -> {target.model}. "
+                f"Przeniesiono {source_sprzedaz} rekordów sprzedaży, usunięto duplikat."
+            )
+            return redirect('produkty:polacz_produkty')
+
+        # akcja == 'podglad'
+        context.update({
+            'pokaz_podglad': True,
+            'source': source,
+            'target': target,
+            'source_sprzedaz': source_sprzedaz,
+            'target_sprzedaz': Sprzedaz.objects.filter(produkt=target).count(),
+        })
+
+    return render(request, 'produkty/polacz_produkty.html', context)
+
 from .models import Funkcja, Podpowiedz
 
 @login_required
@@ -1648,12 +1699,21 @@ def podpowiedz_szczegoly(request, podpowiedz_id):
 @login_required
 def historia_sprzedazy_produktu(request, produkt_id):
     produkt = get_object_or_404(Produkt, id=produkt_id)
-    sprzedaz_list = Sprzedaz.objects.filter(produkt=produkt).order_by('-data_sprzedazy')
-    suma_sztuk = sprzedaz_list.aggregate(total=Sum('liczba_sztuk'))['total'] or 0
+    sprzedaz_list = list(Sprzedaz.objects.filter(produkt=produkt).order_by('-data_sprzedazy'))
+    suma_sztuk = 0
+    suma_prowizji = Decimal('0.00')
+    stawka = produkt.stawka or Decimal('0.00')
+    for s in sprzedaz_list:
+        # Prowizja za 1 szt. = bazowa stawka produktu + ewentualny bonus z zadania.
+        s.prowizja_za_sztuke = stawka + (s.prowizja or Decimal('0.00'))
+        s.prowizja_calkowita = s.liczba_sztuk * stawka + (s.prowizja or Decimal('0.00'))
+        suma_sztuk += s.liczba_sztuk
+        suma_prowizji += s.prowizja_calkowita
     return render(request, 'produkty/historia_sprzedazy_produktu.html', {
         'produkt': produkt,
         'sprzedaz_list': sprzedaz_list,
-        'suma_sztuk': suma_sztuk
+        'suma_sztuk': suma_sztuk,
+        'suma_prowizji': suma_prowizji,
     })
 
 from .forms import UserCreateForm, UserEditForm
