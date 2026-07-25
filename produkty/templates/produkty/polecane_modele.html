@@ -39,6 +39,16 @@
     </div>
 
     {% if recommendations %}
+        <!-- Szybki wybór grupy (wygodne przy wielu grupach) -->
+        <div class="mb-3">
+            <label for="groupJump" class="form-label fw-bold small mb-1"><i class="fas fa-list me-1"></i>Przejdź do grupy produktowej:</label>
+            <select id="groupJump" class="form-select" onchange="showGroup(this.value)">
+                {% for group, brands in recommendations %}
+                <option value="{{ group|slugify }}">{{ group }}</option>
+                {% endfor %}
+            </select>
+        </div>
+
         <!-- Product Group Tabs -->
         <div class="group-tabs-scroll-container mb-4">
             <div class="group-tabs d-flex gap-2">
@@ -482,6 +492,12 @@
         });
         if (targetBtn) {
             targetBtn.classList.add('active');
+            targetBtn.scrollIntoView({ block: 'nearest', inline: 'center', behavior: 'smooth' });
+        }
+        // Synchronizuj liste rozwijana
+        const jump = document.getElementById('groupJump');
+        if (jump && jump.value !== groupId) {
+            jump.value = groupId;
         }
     }
 </script>

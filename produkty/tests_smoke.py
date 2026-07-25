@@ -206,3 +206,48 @@ class ProductDeleteTestCase(TestCase):
         self.assertEqual(r2.status_code, 302)
         self.assertFalse(Produkt.objects.filter(id=p.id).exists())
         self.assertEqual(Sprzedaz.objects.filter(produkt_id=p.id).count(), 0)
+
+
+class HistoriaProwizjaTestCase(TestCase):
+    def setUp(self):
+        self.user = User.objects.create_user(username="hist", password="pass", is_staff=True)
+        self.client = Client()
+        self.client.login(username="hist", password="pass")
+
+    def test_prowizja_liczona_ze_stawki(self):
+        p = Produkt.objects.create(model="P60", stawka=Decimal("60"), grupa_towarowa="X", marka="WHIRLPOOL")
+        Sprzedaz.objects.create(produkt=p, liczba_sztuk=1, data_sprzedazy=date.today())  # prowizja=0
+        Sprzedaz.objects.create(produkt=p, liczba_sztuk=1, data_sprzedazy=date.today(), prowizja=Decimal("20"))
+        r = self.client.get(reverse("produkty:historia_sprzedazy_produktu", args=[p.id]))
+        self.assertEqual(r.status_code, 200)
+        self.assertEqual(r.context["suma_prowizji"], Decimal("140"))  # 60 + (60+20)
+        za_sztuke = sorted(s.prowizja_za_sztuke for s in r.context["sprzedaz_list"])
+        self.assertEqual(za_sztuke, [Decimal("60"), Decimal("80")])
+
+
+class PolaczProduktyTestCase(TestCase):
+    def setUp(self):
+        self.user = User.objects.create_user(username="mrg", password="pass", is_staff=True)
+        self.client = Client()
+        self.client.login(username="mrg", password="pass")
+        self.src = Produkt.objects.create(model="WH8IA15AM3TUS0X", stawka=Decimal("0"), grupa_towarowa="X", marka="WHIRLPOOL")
+        self.tgt = Produkt.objects.create(model="WH8IA15AM3TUS0", stawka=Decimal("60"), grupa_towarowa="X", marka="WHIRLPOOL")
+        Sprzedaz.objects.create(produkt=self.src, liczba_sztuk=1, data_sprzedazy=date.today())
+        Sprzedaz.objects.create(produkt=self.src, liczba_sztuk=1, data_sprzedazy=date.today())
+
+    def test_podglad_nie_laczy(self):
+        r = self.client.post(reverse("produkty:polacz_produkty"), {"akcja": "podglad", "source": self.src.id, "target": self.tgt.id})
+        self.assertEqual(r.status_code, 200)
+        self.assertEqual(r.context["source_sprzedaz"], 2)
+        self.assertTrue(Produkt.objects.filter(id=self.src.id).exists())
+
+    def test_polaczenie_przenosi_sprzedaz(self):
+        r = self.client.post(reverse("produkty:polacz_produkty"), {"akcja": "polacz", "source": self.src.id, "target": self.tgt.id})
+        self.assertEqual(r.status_code, 302)
+        self.assertFalse(Produkt.objects.filter(id=self.src.id).exists())
+        self.assertEqual(Sprzedaz.objects.filter(produkt=self.tgt).count(), 2)
+
+    def test_ten_sam_produkt_odrzucony(self):
+        r = self.client.post(reverse("produkty:polacz_produkty"), {"akcja": "polacz", "source": self.src.id, "target": self.src.id})
+        self.assertEqual(r.status_code, 200)
+        self.assertTrue(Produkt.objects.filter(id=self.src.id).exists())
