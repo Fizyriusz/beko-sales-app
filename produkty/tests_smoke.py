@@ -8,7 +8,7 @@ from django.core.files.uploadedfile import SimpleUploadedFile
 from django.test import Client, TestCase
 from django.urls import reverse
 
-from .models import Produkt, Sprzedaz, Zadanie, DzienPracy, Alejka, MiejsceProduktu
+from .models import Produkt, Sprzedaz, Zadanie, DzienPracy, Alejka, MiejsceProduktu, ObiektMapy
 
 
 def _xlsx(rows):
@@ -123,13 +123,79 @@ class MapaMarketuTestCase(TestCase):
         r = self.client.get(reverse("produkty:mapa_marketu"))
         self.assertEqual(r.status_code, 200)
         self.assertTrue(r.context["ma_alejki"])
-        self.assertEqual(r.context["alejki_json"][0]["lewa"][0]["model"], "LODOWKA1")
-        self.assertTrue(r.context["alejki_json"][0]["lewa"][0]["is_beko"])
+        wpis = r.context["alejki_json"][0]["lewa"][0]
+        self.assertEqual(wpis["model"], "LODOWKA1")
+        self.assertTrue(wpis["moja_marka"])
+        self.assertTrue(wpis["z_katalogu"])
+        # dane ukladu alejki trafiaja do renderera
+        self.assertIn("orientacja", r.context["alejki_json"][0])
+        self.assertIn("dlugosc", r.context["alejki_json"][0])
+
+    def test_cztery_moje_marki(self):
+        for marka in ["WHIRLPOOL", "GRUNDIG", "INDESIT"]:
+            p = Produkt.objects.create(model=f"M-{marka}", stawka=Decimal("10"), grupa_towarowa="X", marka=marka)
+            MiejsceProduktu.objects.create(alejka=self.alejka, produkt=p, strona="L", pozycja=1)
+        obca = Produkt.objects.create(model="M-SAMSUNG", stawka=Decimal("10"), grupa_towarowa="X", marka="SAMSUNG")
+        MiejsceProduktu.objects.create(alejka=self.alejka, produkt=obca, strona="L", pozycja=9)
+        r = self.client.get(reverse("produkty:mapa_marketu"))
+        wpisy = {w["model"]: w["moja_marka"] for w in r.context["alejki_json"][0]["lewa"]}
+        self.assertTrue(wpisy["M-WHIRLPOOL"])
+        self.assertTrue(wpisy["M-GRUNDIG"])
+        self.assertTrue(wpisy["M-INDESIT"])
+        self.assertFalse(wpisy["M-SAMSUNG"])
 
     def test_dodaj_alejke(self):
-        r = self.client.post(reverse("produkty:mapa_zarzadzaj"), {"nazwa": "Nowa", "opis": "", "kolejnosc": 2, "aktywna": "on"})
+        r = self.client.post(reverse("produkty:mapa_zarzadzaj"), {
+            "typ_formularza": "alejka", "nazwa": "Nowa", "opis": "", "kolejnosc": 2,
+            "orientacja": "H", "dlugosc": 12, "pozycja_x": 3, "pozycja_y": 5, "aktywna": "on",
+        })
         self.assertEqual(r.status_code, 302)
-        self.assertTrue(Alejka.objects.filter(nazwa="Nowa").exists())
+        a = Alejka.objects.get(nazwa="Nowa")
+        self.assertEqual(a.orientacja, "H")
+        self.assertEqual(a.dlugosc, 12)
+        self.assertEqual((a.pozycja_x, a.pozycja_y), (3, 5))
+
+    def test_obiekt_wykluczenia(self):
+        r = self.client.post(reverse("produkty:mapa_zarzadzaj"), {
+            "typ_formularza": "obiekt", "nazwa": "Stanowisko projektowania mebli",
+            "typ": "STANOWISKO", "opis": "", "pozycja_x": 2, "pozycja_y": 2,
+            "szerokosc": 4, "wysokosc": 3, "aktywny": "on",
+        })
+        self.assertEqual(r.status_code, 302)
+        o = ObiektMapy.objects.get(nazwa="Stanowisko projektowania mebli")
+        self.assertEqual(o.szerokosc, 4)
+        # obiekt trafia na mape
+        r2 = self.client.get(reverse("produkty:mapa_marketu"))
+        self.assertEqual(r2.context["obiekty_json"][0]["nazwa"], "Stanowisko projektowania mebli")
+        # i da sie go usunac
+        r3 = self.client.post(reverse("produkty:obiekt_usun", args=[o.id]))
+        self.assertEqual(r3.status_code, 302)
+        self.assertFalse(ObiektMapy.objects.filter(id=o.id).exists())
+
+    def test_produkt_spoza_katalogu(self):
+        r = self.client.post(reverse("produkty:miejsce_dodaj", args=[self.alejka.id]), {
+            "marka_tekst": "samsung", "model_tekst": "RB34T672FSA", "strona": "P", "pozycja": 2,
+        })
+        self.assertEqual(r.status_code, 302)
+        m = MiejsceProduktu.objects.get(model_tekst="RB34T672FSA")
+        self.assertIsNone(m.produkt_id)
+        self.assertEqual(m.wyswietlany_model, "RB34T672FSA")
+        r2 = self.client.get(reverse("produkty:mapa_marketu"))
+        wpis = r2.context["alejki_json"][0]["prawa"][0]
+        self.assertFalse(wpis["z_katalogu"])
+        self.assertFalse(wpis["moja_marka"])
+
+    def test_miejsce_bez_danych_odrzucone(self):
+        r = self.client.post(reverse("produkty:miejsce_dodaj", args=[self.alejka.id]), {"strona": "L", "pozycja": 0})
+        self.assertEqual(r.status_code, 302)
+        self.assertEqual(MiejsceProduktu.objects.filter(alejka=self.alejka).count(), 0)
+
+    def test_widok_druku(self):
+        MiejsceProduktu.objects.create(alejka=self.alejka, produkt=self.p, strona="L", pozycja=1)
+        r = self.client.get(reverse("produkty:mapa_druk"))
+        self.assertEqual(r.status_code, 200)
+        self.assertContains(r, "LODOWKA1")
+        self.assertContains(r, "Zapisz jako PDF")
 
     def test_dodaj_i_usun_produkt(self):
         r = self.client.post(reverse("produkty:miejsce_dodaj", args=[self.alejka.id]), {"produkt": self.p.id, "strona": "P", "pozycja": 3})

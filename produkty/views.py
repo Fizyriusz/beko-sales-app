@@ -1,7 +1,7 @@
 from django.shortcuts import render, redirect, get_object_or_404
 from django.contrib import messages
-from .models import Produkt, Sprzedaz, Zadanie, Ekspozycja, GrupaProduktowa, Marka, KlientCounter, DzienPracy, GrafikPracy, PunktChecklisty, OdpowiedzChecklisty, TopGroup, TopSubGroup, TopListEntry, Alejka, MiejsceProduktu
-from .forms import ZadanieForm, ProduktForm, AlejkaForm
+from .models import Produkt, Sprzedaz, Zadanie, Ekspozycja, GrupaProduktowa, Marka, KlientCounter, DzienPracy, GrafikPracy, PunktChecklisty, OdpowiedzChecklisty, TopGroup, TopSubGroup, TopListEntry, Alejka, MiejsceProduktu, ObiektMapy
+from .forms import ZadanieForm, ProduktForm, AlejkaForm, ObiektMapyForm
 import openpyxl
 from openpyxl.utils.exceptions import InvalidFileException
 from zipfile import BadZipFile
@@ -1494,53 +1494,134 @@ def zamiana_marka_grupa(request):
     return render(request, 'produkty/zamiana_marka_grupa.html', context)
 
 
-# ==== Mapa marketu (Faza 1 - widok 2D z lotu ptaka) ====
+# ==== Mapa marketu (widok 2D z lotu ptaka) ====
 
-MARKI_BEKO = {'BEKO', 'GRUNDIG'}
+# Marki wlasne - wyrozniane kolorem na mapie.
+MOJE_MARKI = {'BEKO', 'WHIRLPOOL', 'GRUNDIG', 'INDESIT'}
 
-@login_required
-def mapa_marketu(request):
-    """Podglad wszystkich alejek z lotu ptaka + szczegoly (opis, produkty)."""
+
+def _mapa_dane():
+    """Wspolne dane mapy dla podgladu i wersji do druku/PDF."""
     alejki = Alejka.objects.filter(aktywna=True).prefetch_related('miejsca__produkt')
 
     def _strona(alejka, strona):
-        return [
-            {
-                'marka': m.produkt.marka or '',
-                'model': m.produkt.model,
-                'is_beko': (m.produkt.marka or '').upper() in MARKI_BEKO,
-            }
-            for m in alejka.miejsca.all() if m.strona == strona
-        ]
+        wynik = []
+        for m in alejka.miejsca.all():
+            if m.strona != strona:
+                continue
+            marka = (m.wyswietlana_marka or '')
+            wynik.append({
+                'marka': marka,
+                'model': m.wyswietlany_model,
+                'moja_marka': marka.strip().upper() in MOJE_MARKI,
+                'z_katalogu': bool(m.produkt_id),
+            })
+        return wynik
 
     alejki_json = [
         {
             'id': a.id,
             'nazwa': a.nazwa,
             'opis': a.opis,
+            'orientacja': a.orientacja,
+            'dlugosc': a.dlugosc,
+            'x': a.pozycja_x,
+            'y': a.pozycja_y,
             'lewa': _strona(a, 'L'),
             'prawa': _strona(a, 'P'),
         }
         for a in alejki
     ]
+    obiekty_json = [
+        {
+            'id': o.id,
+            'nazwa': o.nazwa,
+            'opis': o.opis,
+            'typ': o.get_typ_display(),
+            'x': o.pozycja_x,
+            'y': o.pozycja_y,
+            'w': o.szerokosc,
+            'h': o.wysokosc,
+        }
+        for o in ObiektMapy.objects.filter(aktywny=True)
+    ]
+    return alejki_json, obiekty_json
+
+
+@login_required
+def mapa_marketu(request):
+    """Podglad wszystkich alejek z lotu ptaka + szczegoly (opis, produkty)."""
+    alejki_json, obiekty_json = _mapa_dane()
     return render(request, 'produkty/mapa_marketu.html', {
         'alejki_json': alejki_json,
-        'ma_alejki': bool(alejki_json),
+        'obiekty_json': obiekty_json,
+        'ma_alejki': bool(alejki_json or obiekty_json),
+        'moje_marki': sorted(MOJE_MARKI),
     })
+
+
+@login_required
+def mapa_druk(request):
+    """Wersja mapy do druku / zapisu jako PDF (do wyslania firmie)."""
+    alejki_json, obiekty_json = _mapa_dane()
+    return render(request, 'produkty/mapa_druk.html', {
+        'alejki_json': alejki_json,
+        'obiekty_json': obiekty_json,
+        'ma_alejki': bool(alejki_json or obiekty_json),
+        'moje_marki': sorted(MOJE_MARKI),
+        'data_wydruku': datetime.now().date(),
+    })
+
 
 @staff_member_required
 def mapa_zarzadzaj(request):
-    """Lista alejek + dodawanie nowej alejki."""
+    """Lista alejek i obiektow mapy + dodawanie nowych."""
+    form = AlejkaForm()
+    obiekt_form = ObiektMapyForm()
+
     if request.method == 'POST':
-        form = AlejkaForm(request.POST)
+        if request.POST.get('typ_formularza') == 'obiekt':
+            obiekt_form = ObiektMapyForm(request.POST)
+            if obiekt_form.is_valid():
+                obiekt_form.save()
+                messages.success(request, "Dodano obiekt / wykluczenie na mapie.")
+                return redirect('produkty:mapa_zarzadzaj')
+        else:
+            form = AlejkaForm(request.POST)
+            if form.is_valid():
+                form.save()
+                messages.success(request, "Dodano alejkę.")
+                return redirect('produkty:mapa_zarzadzaj')
+
+    return render(request, 'produkty/mapa_zarzadzaj.html', {
+        'form': form,
+        'obiekt_form': obiekt_form,
+        'alejki': Alejka.objects.all().prefetch_related('miejsca'),
+        'obiekty': ObiektMapy.objects.all(),
+    })
+
+
+@staff_member_required
+def obiekt_edytuj(request, obiekt_id):
+    obiekt = get_object_or_404(ObiektMapy, id=obiekt_id)
+    if request.method == 'POST':
+        form = ObiektMapyForm(request.POST, instance=obiekt)
         if form.is_valid():
             form.save()
-            messages.success(request, "Dodano alejkę.")
+            messages.success(request, "Zapisano obiekt.")
             return redirect('produkty:mapa_zarzadzaj')
     else:
-        form = AlejkaForm()
-    alejki = Alejka.objects.all().prefetch_related('miejsca')
-    return render(request, 'produkty/mapa_zarzadzaj.html', {'form': form, 'alejki': alejki})
+        form = ObiektMapyForm(instance=obiekt)
+    return render(request, 'produkty/obiekt_edytuj.html', {'obiekt': obiekt, 'form': form})
+
+
+@staff_member_required
+def obiekt_usun(request, obiekt_id):
+    obiekt = get_object_or_404(ObiektMapy, id=obiekt_id)
+    if request.method == 'POST':
+        obiekt.delete()
+        messages.success(request, "Usunięto obiekt z mapy.")
+    return redirect('produkty:mapa_zarzadzaj')
 
 @staff_member_required
 def alejka_edytuj(request, alejka_id):
@@ -1572,9 +1653,10 @@ def alejka_usun(request, alejka_id):
 
 @staff_member_required
 def miejsce_dodaj(request, alejka_id):
+    """Dodanie produktu do alejki: z katalogu ALBO recznie (marka + model),
+    co pozwala umiescic na mapie produkty spoza moich marek."""
     alejka = get_object_or_404(Alejka, id=alejka_id)
     if request.method == 'POST':
-        produkt = get_object_or_404(Produkt, id=request.POST.get('produkt'))
         strona = request.POST.get('strona', 'L')
         if strona not in ('L', 'P'):
             strona = 'L'
@@ -1582,8 +1664,25 @@ def miejsce_dodaj(request, alejka_id):
             pozycja = int(request.POST.get('pozycja') or 0)
         except (TypeError, ValueError):
             pozycja = 0
-        MiejsceProduktu.objects.create(alejka=alejka, produkt=produkt, strona=strona, pozycja=pozycja)
-        messages.success(request, "Dodano produkt do alejki.")
+
+        produkt_id = request.POST.get('produkt')
+        marka_tekst = (request.POST.get('marka_tekst') or '').strip()
+        model_tekst = (request.POST.get('model_tekst') or '').strip()
+
+        if produkt_id:
+            produkt = get_object_or_404(Produkt, id=produkt_id)
+            MiejsceProduktu.objects.create(
+                alejka=alejka, produkt=produkt, strona=strona, pozycja=pozycja,
+            )
+            messages.success(request, "Dodano produkt z katalogu do alejki.")
+        elif model_tekst:
+            MiejsceProduktu.objects.create(
+                alejka=alejka, produkt=None, strona=strona, pozycja=pozycja,
+                marka_tekst=marka_tekst or 'INNA', model_tekst=model_tekst,
+            )
+            messages.success(request, "Dodano produkt spoza katalogu do alejki.")
+        else:
+            messages.error(request, "Wybierz produkt z katalogu albo wpisz model ręcznie.")
     return redirect('produkty:alejka_edytuj', alejka_id=alejka.id)
 
 @staff_member_required

@@ -10,7 +10,10 @@ urlpatterns = [
 
     # Mapa marketu
     path('mapa/', views.mapa_marketu, name='mapa_marketu'),
+    path('mapa/druk/', views.mapa_druk, name='mapa_druk'),
     path('mapa/zarzadzaj/', views.mapa_zarzadzaj, name='mapa_zarzadzaj'),
+    path('mapa/obiekt/<int:obiekt_id>/edytuj/', views.obiekt_edytuj, name='obiekt_edytuj'),
+    path('mapa/obiekt/<int:obiekt_id>/usun/', views.obiekt_usun, name='obiekt_usun'),
     path('mapa/alejka/<int:alejka_id>/edytuj/', views.alejka_edytuj, name='alejka_edytuj'),
     path('mapa/alejka/<int:alejka_id>/usun/', views.alejka_usun, name='alejka_usun'),
     path('mapa/alejka/<int:alejka_id>/produkt/dodaj/', views.miejsce_dodaj, name='miejsce_dodaj'),

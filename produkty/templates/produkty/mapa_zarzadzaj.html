@@ -6,49 +6,80 @@
 <div class="container mt-4">
     <div class="d-flex justify-content-between align-items-center flex-wrap gap-2 mb-3">
         <h2 class="mb-0">Zarządzaj mapą marketu</h2>
-        <a href="{% url 'produkty:mapa_marketu' %}" class="btn btn-outline-secondary btn-sm">
-            <i class="fas fa-eye"></i> Podgląd mapy
-        </a>
+        <div class="d-flex gap-2">
+            <a href="{% url 'produkty:mapa_druk' %}" class="btn btn-outline-dark btn-sm" target="_blank">
+                <i class="fas fa-file-pdf"></i> Eksport / PDF
+            </a>
+            <a href="{% url 'produkty:mapa_marketu' %}" class="btn btn-outline-secondary btn-sm">
+                <i class="fas fa-eye"></i> Podgląd mapy
+            </a>
+        </div>
+    </div>
+
+    <div class="alert alert-light border small">
+        <i class="fas fa-circle-info me-1"></i>
+        Mapa działa na siatce kratek. <strong>Pozycja X</strong> to odległość od lewej, <strong>Pozycja Y</strong> od góry
+        (0 = początek). Alejka może być <strong>pionowa lub pozioma</strong>, a <strong>długość</strong> określa, jak bardzo się rozciąga.
+        Obiekty (np. stanowisko projektowania mebli) wstawiasz tak samo — podając pozycję oraz szerokość i wysokość.
     </div>
 
     <div class="row">
-        <div class="col-md-4 mb-3">
-            <div class="card">
+        <div class="col-lg-4 mb-3">
+            <div class="card mb-3">
                 <div class="card-header bg-primary text-white">Dodaj alejkę</div>
                 <div class="card-body">
                     <form method="post">
                         {% csrf_token %}
-                        <div class="mb-2">
-                            <label class="form-label">Nazwa</label>
-                            {{ form.nazwa }}
+                        <input type="hidden" name="typ_formularza" value="alejka">
+                        <div class="mb-2"><label class="form-label">Nazwa</label>{{ form.nazwa }}</div>
+                        <div class="mb-2"><label class="form-label">Opis</label>{{ form.opis }}</div>
+                        <div class="row g-2">
+                            <div class="col-6 mb-2"><label class="form-label small">Orientacja</label>{{ form.orientacja }}</div>
+                            <div class="col-6 mb-2"><label class="form-label small">Długość</label>{{ form.dlugosc }}</div>
+                            <div class="col-6 mb-2"><label class="form-label small">Pozycja X</label>{{ form.pozycja_x }}</div>
+                            <div class="col-6 mb-2"><label class="form-label small">Pozycja Y</label>{{ form.pozycja_y }}</div>
                         </div>
-                        <div class="mb-2">
-                            <label class="form-label">Opis</label>
-                            {{ form.opis }}
-                        </div>
-                        <div class="mb-2">
-                            <label class="form-label">Kolejność na mapie</label>
-                            {{ form.kolejnosc }}
-                        </div>
-                        <div class="form-check mb-3">
-                            {{ form.aktywna }}
-                            <label class="form-check-label">Aktywna (widoczna na mapie)</label>
-                        </div>
+                        <div class="mb-2"><label class="form-label small">Kolejność (sortowanie list)</label>{{ form.kolejnosc }}</div>
+                        <div class="form-check mb-3">{{ form.aktywna }}<label class="form-check-label">Aktywna (widoczna na mapie)</label></div>
+                        {% if form.errors %}<div class="alert alert-danger py-1 small">Popraw błędy w formularzu.</div>{% endif %}
                         <button type="submit" class="btn btn-primary w-100">Dodaj alejkę</button>
+                    </form>
+                </div>
+            </div>
+
+            <div class="card">
+                <div class="card-header bg-secondary text-white">Dodaj wykluczenie / strefę</div>
+                <div class="card-body">
+                    <form method="post">
+                        {% csrf_token %}
+                        <input type="hidden" name="typ_formularza" value="obiekt">
+                        <div class="mb-2"><label class="form-label">Nazwa</label>{{ obiekt_form.nazwa }}</div>
+                        <div class="mb-2"><label class="form-label small">Typ</label>{{ obiekt_form.typ }}</div>
+                        <div class="mb-2"><label class="form-label small">Opis</label>{{ obiekt_form.opis }}</div>
+                        <div class="row g-2">
+                            <div class="col-6 mb-2"><label class="form-label small">Pozycja X</label>{{ obiekt_form.pozycja_x }}</div>
+                            <div class="col-6 mb-2"><label class="form-label small">Pozycja Y</label>{{ obiekt_form.pozycja_y }}</div>
+                            <div class="col-6 mb-2"><label class="form-label small">Szerokość</label>{{ obiekt_form.szerokosc }}</div>
+                            <div class="col-6 mb-2"><label class="form-label small">Wysokość</label>{{ obiekt_form.wysokosc }}</div>
+                        </div>
+                        <div class="form-check mb-3">{{ obiekt_form.aktywny }}<label class="form-check-label">Aktywny</label></div>
+                        {% if obiekt_form.errors %}<div class="alert alert-danger py-1 small">Popraw błędy w formularzu.</div>{% endif %}
+                        <button type="submit" class="btn btn-secondary w-100">Dodaj obiekt</button>
                     </form>
                 </div>
             </div>
         </div>
 
-        <div class="col-md-8 mb-3">
-            <div class="card">
+        <div class="col-lg-8 mb-3">
+            <div class="card mb-3">
                 <div class="card-header bg-dark text-white">Alejki ({{ alejki|length }})</div>
                 <div class="card-body p-0">
                     <table class="table table-striped mb-0 align-middle">
                         <thead>
                             <tr>
-                                <th>Kol.</th>
                                 <th>Nazwa</th>
+                                <th class="text-center">Układ</th>
+                                <th class="text-center">Pozycja</th>
                                 <th class="text-center">Produktów</th>
                                 <th class="text-center">Aktywna</th>
                                 <th class="text-end">Akcje</th>
@@ -57,8 +88,9 @@
                         <tbody>
                             {% for a in alejki %}
                             <tr>
-                                <td>{{ a.kolejnosc }}</td>
                                 <td>{{ a.nazwa }}</td>
+                                <td class="text-center"><small>{{ a.get_orientacja_display }}, dł. {{ a.dlugosc }}</small></td>
+                                <td class="text-center"><small>{{ a.pozycja_x }} / {{ a.pozycja_y }}</small></td>
                                 <td class="text-center">{{ a.miejsca.count }}</td>
                                 <td class="text-center">
                                     {% if a.aktywna %}<span class="badge bg-success">Tak</span>{% else %}<span class="badge bg-secondary">Nie</span>{% endif %}
@@ -69,7 +101,48 @@
                                 </td>
                             </tr>
                             {% empty %}
-                            <tr><td colspan="5" class="text-center">Brak alejek. Dodaj pierwszą po lewej.</td></tr>
+                            <tr><td colspan="6" class="text-center">Brak alejek. Dodaj pierwszą po lewej.</td></tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+
+            <div class="card">
+                <div class="card-header bg-secondary text-white">Wykluczenia i strefy ({{ obiekty|length }})</div>
+                <div class="card-body p-0">
+                    <table class="table table-striped mb-0 align-middle">
+                        <thead>
+                            <tr>
+                                <th>Nazwa</th>
+                                <th class="text-center">Typ</th>
+                                <th class="text-center">Pozycja</th>
+                                <th class="text-center">Rozmiar</th>
+                                <th class="text-center">Aktywny</th>
+                                <th class="text-end">Akcje</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for o in obiekty %}
+                            <tr>
+                                <td>{{ o.nazwa }}</td>
+                                <td class="text-center"><small>{{ o.get_typ_display }}</small></td>
+                                <td class="text-center"><small>{{ o.pozycja_x }} / {{ o.pozycja_y }}</small></td>
+                                <td class="text-center"><small>{{ o.szerokosc }} × {{ o.wysokosc }}</small></td>
+                                <td class="text-center">
+                                    {% if o.aktywny %}<span class="badge bg-success">Tak</span>{% else %}<span class="badge bg-secondary">Nie</span>{% endif %}
+                                </td>
+                                <td class="text-end">
+                                    <a href="{% url 'produkty:obiekt_edytuj' o.id %}" class="btn btn-sm btn-warning">Edytuj</a>
+                                    <form method="post" action="{% url 'produkty:obiekt_usun' o.id %}" class="d-inline">
+                                        {% csrf_token %}
+                                        <button type="submit" class="btn btn-sm btn-danger"
+                                                onclick="return confirm('Usunąć obiekt „{{ o.nazwa }}” z mapy?');">Usuń</button>
+                                    </form>
+                                </td>
+                            </tr>
+                            {% empty %}
+                            <tr><td colspan="6" class="text-center">Brak obiektów. Dodaj np. „Stanowisko projektowania mebli”.</td></tr>
                             {% endfor %}
                         </tbody>
                     </table>
