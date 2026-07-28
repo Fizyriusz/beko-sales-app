@@ -118,15 +118,44 @@ class PodpowiedzForm(forms.ModelForm):
         }
 
 
-from .models import Alejka
+from .models import Alejka, ObiektMapy
 
 class AlejkaForm(forms.ModelForm):
     class Meta:
         model = Alejka
-        fields = ['nazwa', 'opis', 'kolejnosc', 'aktywna']
+        fields = [
+            'nazwa', 'opis', 'orientacja', 'dlugosc',
+            'pozycja_x', 'pozycja_y', 'kolejnosc', 'aktywna',
+        ]
         widgets = {
             'nazwa': forms.TextInput(attrs={'class': 'form-control'}),
             'opis': forms.Textarea(attrs={'class': 'form-control', 'rows': 3}),
+            'orientacja': forms.Select(attrs={'class': 'form-select'}),
+            'dlugosc': forms.NumberInput(attrs={'class': 'form-control', 'min': 1, 'max': 40}),
+            'pozycja_x': forms.NumberInput(attrs={'class': 'form-control', 'min': 0, 'max': 60}),
+            'pozycja_y': forms.NumberInput(attrs={'class': 'form-control', 'min': 0, 'max': 60}),
             'kolejnosc': forms.NumberInput(attrs={'class': 'form-control'}),
             'aktywna': forms.CheckboxInput(attrs={'class': 'form-check-input'}),
+        }
+
+    def clean_dlugosc(self):
+        d = self.cleaned_data.get('dlugosc')
+        if d is not None and d < 1:
+            raise forms.ValidationError("Długość musi wynosić co najmniej 1.")
+        return d
+
+
+class ObiektMapyForm(forms.ModelForm):
+    class Meta:
+        model = ObiektMapy
+        fields = ['nazwa', 'opis', 'typ', 'pozycja_x', 'pozycja_y', 'szerokosc', 'wysokosc', 'aktywny']
+        widgets = {
+            'nazwa': forms.TextInput(attrs={'class': 'form-control', 'placeholder': 'np. Stanowisko projektowania mebli'}),
+            'opis': forms.Textarea(attrs={'class': 'form-control', 'rows': 2}),
+            'typ': forms.Select(attrs={'class': 'form-select'}),
+            'pozycja_x': forms.NumberInput(attrs={'class': 'form-control', 'min': 0, 'max': 60}),
+            'pozycja_y': forms.NumberInput(attrs={'class': 'form-control', 'min': 0, 'max': 60}),
+            'szerokosc': forms.NumberInput(attrs={'class': 'form-control', 'min': 1, 'max': 40}),
+            'wysokosc': forms.NumberInput(attrs={'class': 'form-control', 'min': 1, 'max': 40}),
+            'aktywny': forms.CheckboxInput(attrs={'class': 'form-check-input'}),
         }

@@ -10,15 +10,21 @@
     </div>
 
     <div class="row">
-        <div class="col-md-5 mb-3">
+        <div class="col-lg-5 mb-3">
             <div class="card">
-                <div class="card-header bg-primary text-white">Dane alejki</div>
+                <div class="card-header bg-primary text-white">Dane i układ alejki</div>
                 <div class="card-body">
                     <form method="post">
                         {% csrf_token %}
                         <div class="mb-2"><label class="form-label">Nazwa</label>{{ form.nazwa }}</div>
                         <div class="mb-2"><label class="form-label">Opis</label>{{ form.opis }}</div>
-                        <div class="mb-2"><label class="form-label">Kolejność na mapie</label>{{ form.kolejnosc }}</div>
+                        <div class="row g-2">
+                            <div class="col-6 mb-2"><label class="form-label small">Orientacja</label>{{ form.orientacja }}</div>
+                            <div class="col-6 mb-2"><label class="form-label small">Długość (kratki)</label>{{ form.dlugosc }}</div>
+                            <div class="col-6 mb-2"><label class="form-label small">Pozycja X</label>{{ form.pozycja_x }}</div>
+                            <div class="col-6 mb-2"><label class="form-label small">Pozycja Y</label>{{ form.pozycja_y }}</div>
+                        </div>
+                        <div class="mb-2"><label class="form-label small">Kolejność</label>{{ form.kolejnosc }}</div>
                         <div class="form-check mb-3">{{ form.aktywna }}<label class="form-check-label">Aktywna</label></div>
                         <button type="submit" class="btn btn-primary">Zapisz zmiany</button>
                     </form>
@@ -26,36 +32,76 @@
             </div>
         </div>
 
-        <div class="col-md-7 mb-3">
+        <div class="col-lg-7 mb-3">
             <div class="card">
                 <div class="card-header bg-dark text-white">Produkty w alejce ({{ miejsca|length }})</div>
                 <div class="card-body">
-                    <form method="post" action="{% url 'produkty:miejsce_dodaj' alejka.id %}" class="row g-2 align-items-end mb-3">
-                        {% csrf_token %}
-                        <div class="col-12 col-sm-5">
-                            <label class="form-label small mb-1">Produkt</label>
-                            <select name="produkt" class="form-select form-select-sm" required>
-                                <option value="">— wybierz —</option>
-                                {% for p in produkty %}
-                                <option value="{{ p.id }}">{{ p.marka }} {{ p.model }}</option>
-                                {% endfor %}
-                            </select>
+                    <ul class="nav nav-tabs mb-3" role="tablist">
+                        <li class="nav-item"><button class="nav-link active" data-bs-toggle="tab" data-bs-target="#tab-katalog" type="button">Z katalogu</button></li>
+                        <li class="nav-item"><button class="nav-link" data-bs-toggle="tab" data-bs-target="#tab-reczny" type="button">Spoza katalogu</button></li>
+                    </ul>
+
+                    <div class="tab-content mb-3">
+                        <div class="tab-pane fade show active" id="tab-katalog">
+                            <form method="post" action="{% url 'produkty:miejsce_dodaj' alejka.id %}" class="row g-2 align-items-end">
+                                {% csrf_token %}
+                                <div class="col-12 col-sm-5">
+                                    <label class="form-label small mb-1">Produkt z katalogu</label>
+                                    <select name="produkt" class="form-select form-select-sm" required>
+                                        <option value="">— wybierz —</option>
+                                        {% for p in produkty %}
+                                        <option value="{{ p.id }}">{{ p.marka }} {{ p.model }}</option>
+                                        {% endfor %}
+                                    </select>
+                                </div>
+                                <div class="col-6 col-sm-3">
+                                    <label class="form-label small mb-1">Strona</label>
+                                    <select name="strona" class="form-select form-select-sm">
+                                        <option value="L">A (lewa/górna)</option>
+                                        <option value="P">B (prawa/dolna)</option>
+                                    </select>
+                                </div>
+                                <div class="col-6 col-sm-2">
+                                    <label class="form-label small mb-1">Pozycja</label>
+                                    <input type="number" name="pozycja" class="form-control form-control-sm" value="0" min="0">
+                                </div>
+                                <div class="col-12 col-sm-2 d-grid">
+                                    <button type="submit" class="btn btn-success btn-sm">Dodaj</button>
+                                </div>
+                            </form>
                         </div>
-                        <div class="col-6 col-sm-3">
-                            <label class="form-label small mb-1">Strona</label>
-                            <select name="strona" class="form-select form-select-sm">
-                                <option value="L">Lewa</option>
-                                <option value="P">Prawa</option>
-                            </select>
+
+                        <div class="tab-pane fade" id="tab-reczny">
+                            <p class="text-muted small mb-2">
+                                Dla produktów konkurencji lub takich, których nie ma w katalogu — wpisz markę i model ręcznie.
+                            </p>
+                            <form method="post" action="{% url 'produkty:miejsce_dodaj' alejka.id %}" class="row g-2 align-items-end">
+                                {% csrf_token %}
+                                <div class="col-6 col-sm-3">
+                                    <label class="form-label small mb-1">Marka</label>
+                                    <input type="text" name="marka_tekst" class="form-control form-control-sm" placeholder="np. SAMSUNG">
+                                </div>
+                                <div class="col-6 col-sm-4">
+                                    <label class="form-label small mb-1">Model</label>
+                                    <input type="text" name="model_tekst" class="form-control form-control-sm" placeholder="np. RB34T672FSA" required>
+                                </div>
+                                <div class="col-6 col-sm-2">
+                                    <label class="form-label small mb-1">Strona</label>
+                                    <select name="strona" class="form-select form-select-sm">
+                                        <option value="L">A</option>
+                                        <option value="P">B</option>
+                                    </select>
+                                </div>
+                                <div class="col-6 col-sm-1">
+                                    <label class="form-label small mb-1">Poz.</label>
+                                    <input type="number" name="pozycja" class="form-control form-control-sm" value="0" min="0">
+                                </div>
+                                <div class="col-12 col-sm-2 d-grid">
+                                    <button type="submit" class="btn btn-success btn-sm">Dodaj</button>
+                                </div>
+                            </form>
                         </div>
-                        <div class="col-6 col-sm-2">
-                            <label class="form-label small mb-1">Pozycja</label>
-                            <input type="number" name="pozycja" class="form-control form-control-sm" value="0" min="0">
-                        </div>
-                        <div class="col-12 col-sm-2 d-grid">
-                            <button type="submit" class="btn btn-success btn-sm">Dodaj</button>
-                        </div>
-                    </form>
+                    </div>
 
                     <table class="table table-sm table-striped align-middle mb-0">
                         <thead>
@@ -64,10 +110,13 @@
                         <tbody>
                             {% for m in miejsca %}
                             <tr>
-                                <td>{{ m.get_strona_display }}</td>
+                                <td>{% if m.strona == 'L' %}A{% else %}B{% endif %}</td>
                                 <td>{{ m.pozycja }}</td>
-                                <td>{{ m.produkt.marka }}</td>
-                                <td>{{ m.produkt.model }}</td>
+                                <td>{{ m.wyswietlana_marka }}</td>
+                                <td>
+                                    {{ m.wyswietlany_model }}
+                                    {% if not m.produkt_id %}<span class="badge bg-light text-dark border">spoza katalogu</span>{% endif %}
+                                </td>
                                 <td class="text-end">
                                     <form method="post" action="{% url 'produkty:miejsce_usun' m.id %}" class="d-inline">
                                         {% csrf_token %}

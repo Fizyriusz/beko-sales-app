@@ -56,7 +56,7 @@ admin.site.register(TopGroup)
 admin.site.register(TopSubGroup)
 admin.site.register(TopListEntry)
 
-from .models import Alejka, MiejsceProduktu
+from .models import Alejka, MiejsceProduktu, ObiektMapy
 
 class MiejsceProduktuInline(admin.TabularInline):
     model = MiejsceProduktu
@@ -65,6 +65,12 @@ class MiejsceProduktuInline(admin.TabularInline):
 
 @admin.register(Alejka)
 class AlejkaAdmin(admin.ModelAdmin):
-    list_display = ('nazwa', 'kolejnosc', 'aktywna')
+    list_display = ('nazwa', 'orientacja', 'dlugosc', 'pozycja_x', 'pozycja_y', 'kolejnosc', 'aktywna')
     list_editable = ('kolejnosc', 'aktywna')
     inlines = [MiejsceProduktuInline]
+
+@admin.register(ObiektMapy)
+class ObiektMapyAdmin(admin.ModelAdmin):
+    list_display = ('nazwa', 'typ', 'pozycja_x', 'pozycja_y', 'szerokosc', 'wysokosc', 'aktywny')
+    list_filter = ('typ', 'aktywny')
+    search_fields = ('nazwa',)

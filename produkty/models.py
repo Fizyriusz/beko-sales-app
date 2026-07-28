@@ -182,11 +182,25 @@ class TopListEntry(models.Model):
 
 
 class Alejka(models.Model):
-    """Alejka w markecie - element mapy z lotu ptaka (Faza 1 wizualizacji)."""
+    """Alejka w markecie - element mapy z lotu ptaka."""
+    class Orientacja(models.TextChoices):
+        PIONOWA = "V", "Pionowa"
+        POZIOMA = "H", "Pozioma"
+
     nazwa = models.CharField(max_length=150, verbose_name="Nazwa alejki")
     opis = models.TextField(blank=True, verbose_name="Opis")
     kolejnosc = models.IntegerField(default=0, verbose_name="Kolejność na mapie")
     aktywna = models.BooleanField(default=True, verbose_name="Aktywna")
+    orientacja = models.CharField(
+        max_length=1, choices=Orientacja.choices, default=Orientacja.PIONOWA,
+        verbose_name="Orientacja",
+    )
+    dlugosc = models.PositiveIntegerField(
+        default=8, verbose_name="Długość (w kratkach)",
+        help_text="Im większa wartość, tym dłuższa alejka na mapie.",
+    )
+    pozycja_x = models.IntegerField(default=0, verbose_name="Pozycja X (kratka)")
+    pozycja_y = models.IntegerField(default=0, verbose_name="Pozycja Y (kratka)")
 
     class Meta:
         ordering = ['kolejnosc', 'nazwa']
@@ -197,6 +211,34 @@ class Alejka(models.Model):
         return self.nazwa
 
 
+class ObiektMapy(models.Model):
+    """Element mapy, ktory nie jest alejka: wykluczenie / strefa specjalna,
+    np. stanowisko do projektowania mebli, kasa, magazyn, filar."""
+    class Typ(models.TextChoices):
+        WYKLUCZENIE = "WYKLUCZENIE", "Wykluczenie / strefa"
+        STANOWISKO = "STANOWISKO", "Stanowisko"
+        KASA = "KASA", "Kasa"
+        MAGAZYN = "MAGAZYN", "Magazyn / zaplecze"
+        INNE = "INNE", "Inne"
+
+    nazwa = models.CharField(max_length=150, verbose_name="Nazwa")
+    opis = models.TextField(blank=True, verbose_name="Opis")
+    typ = models.CharField(max_length=20, choices=Typ.choices, default=Typ.WYKLUCZENIE, verbose_name="Typ")
+    pozycja_x = models.IntegerField(default=0, verbose_name="Pozycja X (kratka)")
+    pozycja_y = models.IntegerField(default=0, verbose_name="Pozycja Y (kratka)")
+    szerokosc = models.PositiveIntegerField(default=3, verbose_name="Szerokość (w kratkach)")
+    wysokosc = models.PositiveIntegerField(default=3, verbose_name="Wysokość (w kratkach)")
+    aktywny = models.BooleanField(default=True, verbose_name="Aktywny")
+
+    class Meta:
+        ordering = ['nazwa']
+        verbose_name = "Obiekt mapy"
+        verbose_name_plural = "Obiekty mapy"
+
+    def __str__(self):
+        return f"{self.nazwa} ({self.get_typ_display()})"
+
+
 class MiejsceProduktu(models.Model):
     """Produkt ustawiony w konkretnej alejce (strona + pozycja)."""
     class Strona(models.TextChoices):
@@ -204,7 +246,12 @@ class MiejsceProduktu(models.Model):
         PRAWA = "P", "Prawa"
 
     alejka = models.ForeignKey(Alejka, on_delete=models.CASCADE, related_name='miejsca')
-    produkt = models.ForeignKey(Produkt, on_delete=models.CASCADE, related_name='miejsca')
+    # Produkt z katalogu ALBO wpis reczny (marka/model spoza moich marek).
+    produkt = models.ForeignKey(
+        Produkt, on_delete=models.CASCADE, related_name='miejsca', null=True, blank=True,
+    )
+    marka_tekst = models.CharField(max_length=100, blank=True, verbose_name="Marka (spoza katalogu)")
+    model_tekst = models.CharField(max_length=150, blank=True, verbose_name="Model (spoza katalogu)")
     strona = models.CharField(max_length=1, choices=Strona.choices, default=Strona.LEWA)
     pozycja = models.PositiveIntegerField(default=0, verbose_name="Pozycja w alejce")
 
@@ -213,5 +260,17 @@ class MiejsceProduktu(models.Model):
         verbose_name = "Miejsce produktu"
         verbose_name_plural = "Miejsca produktów"
 
+    @property
+    def wyswietlana_marka(self):
+        if self.produkt_id:
+            return self.produkt.marka or ''
+        return self.marka_tekst
+
+    @property
+    def wyswietlany_model(self):
+        if self.produkt_id:
+            return self.produkt.model
+        return self.model_tekst
+
     def __str__(self):
-        return f"{self.alejka.nazwa} [{self.get_strona_display()}#{self.pozycja}]: {self.produkt.model}"
+        return f"{self.alejka.nazwa} [{self.get_strona_display()}#{self.pozycja}]: {self.wyswietlany_model}"

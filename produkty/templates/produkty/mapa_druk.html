@@ -1,0 +1,110 @@
+{% load static %}<!DOCTYPE html>
+<html lang="pl">
+<head>
+    <meta charset="UTF-8">
+    <title>Mapa marketu — {{ data_wydruku }}</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <style>
+        body { font-family: Arial, Helvetica, sans-serif; margin: 24px; color: #222; }
+        h1 { font-size: 20px; margin: 0 0 4px; }
+        .meta { color: #666; font-size: 12px; margin-bottom: 14px; }
+        .legenda { font-size: 12px; margin: 10px 0 16px; }
+        .legenda span { margin-right: 16px; }
+        .kwadrat { display: inline-block; width: 11px; height: 11px; vertical-align: -1px; margin-right: 4px; }
+        .mapa-box { border: 1px solid #ccc; border-radius: 8px; padding: 8px; background: #fff; }
+        table { border-collapse: collapse; width: 100%; font-size: 12px; margin-top: 6px; }
+        th, td { border: 1px solid #ddd; padding: 5px 7px; text-align: left; }
+        th { background: #f4f4f4; }
+        .alejka-blok { margin-top: 18px; page-break-inside: avoid; }
+        .alejka-blok h2 { font-size: 15px; margin: 0 0 2px; }
+        .alejka-blok .opis { color: #666; font-size: 12px; margin: 0 0 6px; }
+        .no-print { margin-bottom: 16px; }
+        .btn { display: inline-block; padding: 8px 16px; background: #002450; color: #fff;
+               border: none; border-radius: 6px; cursor: pointer; font-size: 14px; text-decoration: none; }
+        .obce { color: #8a6d3b; font-size: 11px; }
+        @media print {
+            .no-print { display: none !important; }
+            body { margin: 0; }
+            .mapa-box { border: none; }
+        }
+    </style>
+</head>
+<body>
+    <div class="no-print">
+        <button class="btn" onclick="window.print()">Drukuj / Zapisz jako PDF</button>
+        <a class="btn" style="background:#666;" href="{% url 'produkty:mapa_marketu' %}">Powrót do mapy</a>
+        <p style="font-size:12px;color:#666;margin-top:8px;">
+            W oknie drukowania wybierz drukarkę „Zapisz jako PDF" (Microsoft Print to PDF / Save as PDF),
+            aby otrzymać plik do wysłania firmie.
+        </p>
+    </div>
+
+    <h1>Mapa marketu — rozmieszczenie ekspozycji</h1>
+    <div class="meta">Wygenerowano: {{ data_wydruku }}</div>
+
+    {% if not ma_alejki %}
+        <p>Brak danych do wydruku.</p>
+    {% else %}
+        <div class="legenda">
+            <span><span class="kwadrat" style="background:#378ADD;"></span>Moje marki ({% for m in moje_marki %}{{ m }}{% if not forloop.last %}, {% endif %}{% endfor %})</span>
+            <span><span class="kwadrat" style="background:#D85A30;"></span>Pozostałe marki</span>
+            <span><span class="kwadrat" style="background:#eceff1;border:1px dashed #90a4ae;"></span>Wykluczenia / strefy</span>
+        </div>
+
+        <div class="mapa-box">
+            <div id="mapaSvg"></div>
+        </div>
+
+        <h2 style="font-size:16px;margin-top:24px;">Szczegóły alejek</h2>
+        {% for a in alejki_json %}
+        <div class="alejka-blok">
+            <h2>{{ a.nazwa }}</h2>
+            {% if a.opis %}<p class="opis">{{ a.opis }}</p>{% endif %}
+            <table>
+                <thead>
+                    <tr><th style="width:90px;">Strona</th><th style="width:160px;">Marka</th><th>Model</th></tr>
+                </thead>
+                <tbody>
+                    {% for p in a.lewa %}
+                    <tr><td>A</td><td>{{ p.marka }}</td><td>{{ p.model }}{% if not p.z_katalogu %} <span class="obce">(spoza katalogu)</span>{% endif %}</td></tr>
+                    {% endfor %}
+                    {% for p in a.prawa %}
+                    <tr><td>B</td><td>{{ p.marka }}</td><td>{{ p.model }}{% if not p.z_katalogu %} <span class="obce">(spoza katalogu)</span>{% endif %}</td></tr>
+                    {% endfor %}
+                    {% if not a.lewa and not a.prawa %}
+                    <tr><td colspan="3">Brak przypisanych produktów.</td></tr>
+                    {% endif %}
+                </tbody>
+            </table>
+        </div>
+        {% endfor %}
+
+        {% if obiekty_json %}
+        <div class="alejka-blok">
+            <h2>Wykluczenia i strefy specjalne</h2>
+            <table>
+                <thead><tr><th style="width:200px;">Nazwa</th><th style="width:160px;">Typ</th><th>Opis</th></tr></thead>
+                <tbody>
+                    {% for o in obiekty_json %}
+                    <tr><td>{{ o.nazwa }}</td><td>{{ o.typ }}</td><td>{{ o.opis }}</td></tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+        {% endif %}
+    {% endif %}
+
+    {{ alejki_json|json_script:"alejki-data" }}
+    {{ obiekty_json|json_script:"obiekty-data" }}
+    <script src="{% static 'produkty/js/mapa_marketu.js' %}?v=1"></script>
+    <script>
+    document.addEventListener('DOMContentLoaded', function () {
+        var elA = document.getElementById('alejki-data');
+        var elO = document.getElementById('obiekty-data');
+        var box = document.getElementById('mapaSvg');
+        if (!elA || !box) return;
+        MapaMarketu.render(box, JSON.parse(elA.textContent), elO ? JSON.parse(elO.textContent) : []);
+    });
+    </script>
+</body>
+</html>

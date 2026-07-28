@@ -1,0 +1,32 @@
+{% extends "produkty/base.html" %}
+
+{% block title %}Obiekt: {{ obiekt.nazwa }}{% endblock %}
+
+{% block content %}
+<div class="container mt-4">
+    <div class="d-flex justify-content-between align-items-center flex-wrap gap-2 mb-3">
+        <h2 class="mb-0">Obiekt na mapie: {{ obiekt.nazwa }}</h2>
+        <a href="{% url 'produkty:mapa_zarzadzaj' %}" class="btn btn-outline-secondary btn-sm">← Wróć do zarządzania mapą</a>
+    </div>
+
+    <div class="card" style="max-width:560px;">
+        <div class="card-header bg-secondary text-white">Dane obiektu / wykluczenia</div>
+        <div class="card-body">
+            <form method="post">
+                {% csrf_token %}
+                <div class="mb-2"><label class="form-label">Nazwa</label>{{ form.nazwa }}</div>
+                <div class="mb-2"><label class="form-label">Typ</label>{{ form.typ }}</div>
+                <div class="mb-2"><label class="form-label">Opis</label>{{ form.opis }}</div>
+                <div class="row g-2">
+                    <div class="col-6 mb-2"><label class="form-label small">Pozycja X</label>{{ form.pozycja_x }}</div>
+                    <div class="col-6 mb-2"><label class="form-label small">Pozycja Y</label>{{ form.pozycja_y }}</div>
+                    <div class="col-6 mb-2"><label class="form-label small">Szerokość</label>{{ form.szerokosc }}</div>
+                    <div class="col-6 mb-2"><label class="form-label small">Wysokość</label>{{ form.wysokosc }}</div>
+                </div>
+                <div class="form-check mb-3">{{ form.aktywny }}<label class="form-check-label">Aktywny (widoczny na mapie)</label></div>
+                <button type="submit" class="btn btn-primary">Zapisz zmiany</button>
+            </form>
+        </div>
+    </div>
+</div>
+{% endblock %}
