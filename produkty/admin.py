@@ -74,3 +74,22 @@ class ObiektMapyAdmin(admin.ModelAdmin):
     list_display = ('nazwa', 'typ', 'pozycja_x', 'pozycja_y', 'szerokosc', 'wysokosc', 'aktywny')
     list_filter = ('typ', 'aktywny')
     search_fields = ('nazwa',)
+
+from .models import Hala, TargetHali
+
+class TargetHaliInline(admin.TabularInline):
+    model = TargetHali
+    extra = 1
+
+@admin.register(Hala)
+class HalaAdmin(admin.ModelAdmin):
+    list_display = ('nazwa', 'aktywna')
+    list_filter = ('aktywna',)
+    search_fields = ('nazwa',)
+    filter_horizontal = ('pracownicy',)
+    inlines = [TargetHaliInline]
+
+@admin.register(TargetHali)
+class TargetHaliAdmin(admin.ModelAdmin):
+    list_display = ('hala', 'rok', 'kwartal', 'miesiac', 'typ', 'cel_beko', 'cel_whirlpool')
+    list_filter = ('hala', 'rok', 'kwartal', 'typ')

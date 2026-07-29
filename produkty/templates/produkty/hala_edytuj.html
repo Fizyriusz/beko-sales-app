@@ -1,0 +1,113 @@
+{% extends "produkty/base.html" %}
+
+{% block title %}Hala: {{ hala.nazwa }}{% endblock %}
+
+{% block content %}
+<div class="container mt-4">
+    <div class="d-flex justify-content-between align-items-center flex-wrap gap-2 mb-3">
+        <h2 class="mb-0">Hala: {{ hala.nazwa }}</h2>
+        <div class="d-flex gap-2">
+            <a href="{% url 'produkty:realizacja_targetu_hali' hala.id %}" class="btn btn-outline-success btn-sm">
+                <i class="fas fa-bullseye"></i> Realizacja
+            </a>
+            <a href="{% url 'produkty:hale_lista' %}" class="btn btn-outline-secondary btn-sm">← Lista hal</a>
+        </div>
+    </div>
+
+    <div class="row">
+        <div class="col-lg-5 mb-3">
+            <div class="card mb-3">
+                <div class="card-header bg-primary text-white">Dane hali i pracownicy</div>
+                <div class="card-body">
+                    <form method="post">
+                        {% csrf_token %}
+                        <input type="hidden" name="typ_formularza" value="hala">
+                        <div class="mb-2"><label class="form-label">Nazwa</label>{{ form.nazwa }}</div>
+                        <div class="mb-2"><label class="form-label">Opis / lokalizacja</label>{{ form.opis }}</div>
+                        <div class="mb-2">
+                            <label class="form-label">Pracownicy przypisani do hali</label>
+                            {{ form.pracownicy }}
+                            <div class="form-text">Ich sprzedaż liczy się do targetu tej hali.</div>
+                        </div>
+                        <div class="form-check mb-3">{{ form.aktywna }}<label class="form-check-label">Aktywna</label></div>
+                        <button type="submit" class="btn btn-primary">Zapisz halę</button>
+                    </form>
+                </div>
+            </div>
+
+            <div class="card">
+                <div class="card-header bg-secondary text-white">Dodaj target</div>
+                <div class="card-body">
+                    <form method="post">
+                        {% csrf_token %}
+                        <input type="hidden" name="typ_formularza" value="target">
+                        <div class="mb-2"><label class="form-label small">Typ targetu</label>{{ target_form.typ }}</div>
+                        <div class="row g-2">
+                            <div class="col-4 mb-2"><label class="form-label small">Rok</label>{{ target_form.rok }}</div>
+                            <div class="col-4 mb-2"><label class="form-label small">Kwartał</label>{{ target_form.kwartal }}</div>
+                            <div class="col-4 mb-2"><label class="form-label small">Miesiąc</label>{{ target_form.miesiac }}</div>
+                        </div>
+                        <div class="row g-2">
+                            <div class="col-6 mb-2"><label class="form-label small">Cel Beko (szt.)</label>{{ target_form.cel_beko }}</div>
+                            <div class="col-6 mb-2"><label class="form-label small">Cel Whirlpool (szt.)</label>{{ target_form.cel_whirlpool }}</div>
+                        </div>
+                        <div class="form-text mb-2">
+                            Typowo: <strong>target miesięczny</strong> na każdy miesiąc kwartału (np. 130 Beko / 100 Whirlpool) —
+                            rozliczenie kwartalne policzy się jako suma. Wybierz <strong>kwartalny</strong>, jeśli dostajesz
+                            jedną liczbę na cały kwartał.
+                        </div>
+                        {% if target_form.errors %}
+                        <div class="alert alert-danger py-1 small">
+                            {% for e in target_form.non_field_errors %}{{ e }}<br>{% endfor %}
+                            {% for f in target_form %}{% for e in f.errors %}{{ f.label }}: {{ e }}<br>{% endfor %}{% endfor %}
+                        </div>
+                        {% endif %}
+                        <button type="submit" class="btn btn-secondary w-100">Zapisz target</button>
+                    </form>
+                </div>
+            </div>
+        </div>
+
+        <div class="col-lg-7 mb-3">
+            <div class="card">
+                <div class="card-header bg-dark text-white">Targety hali ({{ targety|length }})</div>
+                <div class="card-body p-0">
+                    <table class="table table-striped mb-0 align-middle">
+                        <thead>
+                            <tr>
+                                <th>Okres</th>
+                                <th class="text-center">Typ</th>
+                                <th class="text-center">Cel Beko</th>
+                                <th class="text-center">Cel Whirlpool</th>
+                                <th class="text-end">Akcja</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for t in targety %}
+                            <tr>
+                                <td>
+                                    <strong>{{ t.nazwa_okresu }}</strong>
+                                    {% if t.miesiac %}<small class="text-muted">(Q{{ t.kwartal }})</small>{% endif %}
+                                </td>
+                                <td class="text-center"><small>{{ t.get_typ_display }}</small></td>
+                                <td class="text-center">{{ t.cel_beko }}</td>
+                                <td class="text-center">{{ t.cel_whirlpool }}</td>
+                                <td class="text-end">
+                                    <form method="post" action="{% url 'produkty:target_usun' t.id %}" class="d-inline">
+                                        {% csrf_token %}
+                                        <button type="submit" class="btn btn-sm btn-outline-danger"
+                                                onclick="return confirm('Usunąć ten target?');">Usuń</button>
+                                    </form>
+                                </td>
+                            </tr>
+                            {% empty %}
+                            <tr><td colspan="5" class="text-center">Brak targetów. Dodaj pierwszy po lewej.</td></tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

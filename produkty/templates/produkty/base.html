@@ -60,6 +60,7 @@
                         <li><a href="{% url 'produkty:podsumowanie_sprzedazy' %}">Podsumowanie Sprzedaży</a></li>
                         <li><a href="{% url 'produkty:calendar' %}">Kalendarz Sprzedaży</a></li>
                         <li><a href="{% url 'produkty:polecane_modele' %}">Polecane modele</a></li>
+                        <li><a href="{% url 'produkty:realizacja_targetu' %}">Realizacja targetu</a></li>
                     </ul>
                 </li>
                 <li class="has-submenu">
@@ -95,6 +96,8 @@
                     <a href="#" class="submenu-toggle"><i class="fas fa-user-shield"></i> Admin <i class="fas fa-chevron-down float-end"></i></a>
                     <ul class="submenu">
                         <li><a href="{% url 'produkty:import_excel' %}">Import produktów</a></li>
+                        <li><a href="{% url 'produkty:hale_lista' %}">Hale i targety</a></li>
+                        <li><a href="{% url 'produkty:przypisz_sprzedaze' %}">Przypisz sprzedaż do konta</a></li>
                         <li><a href="{% url 'produkty:grupy_marki' %}">Grupy i marki (przegląd)</a></li>
                         <li><a href="{% url 'produkty:zamiana_marka_grupa' %}">Zamiana marka ↔ grupa</a></li>
                         <li><a href="{% url 'produkty:polacz_produkty' %}">Połącz duplikaty produktów</a></li>

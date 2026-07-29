@@ -48,6 +48,12 @@ class Sprzedaz(models.Model):
     data_sprzedazy = models.DateField(default=date.today)
     zadanie = models.ForeignKey(Zadanie, on_delete=models.SET_NULL, null=True, blank=True)
     prowizja = models.DecimalField(max_digits=10, decimal_places=2, default=0)
+    # Kto zaraportowal sprzedaz - potrzebne do rozliczania targetow hal.
+    # Puste dla sprzedazy sprzed wprowadzenia hal (mozna przypisac hurtowo).
+    user = models.ForeignKey(
+        User, on_delete=models.SET_NULL, null=True, blank=True,
+        related_name='sprzedaze', verbose_name="Sprzedawca",
+    )
 
     def __str__(self):
         return f"{self.produkt.model} - {self.liczba_sztuk} sztuk - {self.data_sprzedazy} - prowizja: {self.prowizja}"
@@ -273,4 +279,100 @@ class MiejsceProduktu(models.Model):
         return self.model_tekst
 
     def __str__(self):
-        return f"{self.alejka.nazwa} [{self.get_strona_display()}#{self.pozycja}]: {self.wyswietlany_model}"
+        return f"{self.alejka.nazwa} [{self.get_strona_display()}#{self.pozycja}]: {self.wyswietlany_model}"
+
+
+# Grupy marek uzywane do rozliczania targetow.
+# Target "Beko" realizuja marki Beko + Grundig,
+# target "Whirlpool" realizuja Whirlpool + Hotpoint + Indesit.
+GRUPA_BEKO_MARKI = ('BEKO', 'GRUNDIG')
+GRUPA_WHIRLPOOL_MARKI = ('WHIRLPOOL', 'HOTPOINT', 'INDESIT')
+
+
+class Hala(models.Model):
+    """Lokalizacja (hala/market) z przypisanymi pracownikami."""
+    nazwa = models.CharField(max_length=150, verbose_name="Nazwa hali")
+    opis = models.TextField(blank=True, verbose_name="Opis / lokalizacja")
+    aktywna = models.BooleanField(default=True, verbose_name="Aktywna")
+    pracownicy = models.ManyToManyField(
+        User, related_name='hale', blank=True, verbose_name="Pracownicy",
+    )
+
+    class Meta:
+        ordering = ['nazwa']
+        verbose_name = "Hala"
+        verbose_name_plural = "Hale"
+
+    def __str__(self):
+        return self.nazwa
+
+
+class TargetHali(models.Model):
+    """Target sprzedazowy hali. Rozliczenie jest kwartalne, ale cele moga byc
+    zadane per miesiac (typowy przypadek) albo jednym numerem na caly kwartal."""
+    class Typ(models.TextChoices):
+        MIESIECZNY = "MIESIAC", "Miesięczny"
+        KWARTALNY = "KWARTAL", "Kwartalny"
+
+    hala = models.ForeignKey(Hala, on_delete=models.CASCADE, related_name='targety')
+    typ = models.CharField(max_length=10, choices=Typ.choices, default=Typ.MIESIECZNY, verbose_name="Typ targetu")
+    rok = models.PositiveIntegerField(verbose_name="Rok")
+    kwartal = models.PositiveSmallIntegerField(
+        choices=[(1, 'Q1'), (2, 'Q2'), (3, 'Q3'), (4, 'Q4')], verbose_name="Kwartał",
+    )
+    miesiac = models.PositiveSmallIntegerField(
+        null=True, blank=True, verbose_name="Miesiąc",
+        help_text="Wypełniane tylko dla targetu miesięcznego.",
+    )
+    cel_beko = models.PositiveIntegerField(default=0, verbose_name="Cel Beko (szt.)")
+    cel_whirlpool = models.PositiveIntegerField(default=0, verbose_name="Cel Whirlpool (szt.)")
+
+    class Meta:
+        ordering = ['-rok', '-kwartal', 'miesiac']
+        verbose_name = "Target hali"
+        verbose_name_plural = "Targety hal"
+        constraints = [
+            models.UniqueConstraint(
+                fields=['hala', 'rok', 'miesiac'],
+                condition=models.Q(miesiac__isnull=False),
+                name='unikalny_target_miesieczny',
+            ),
+            models.UniqueConstraint(
+                fields=['hala', 'rok', 'kwartal'],
+                condition=models.Q(miesiac__isnull=True),
+                name='unikalny_target_kwartalny',
+            ),
+        ]
+
+    @staticmethod
+    def kwartal_dla_miesiaca(miesiac):
+        return (int(miesiac) - 1) // 3 + 1
+
+    @staticmethod
+    def miesiace_kwartalu(kwartal):
+        start = (int(kwartal) - 1) * 3 + 1
+        return [start, start + 1, start + 2]
+
+    def save(self, *args, **kwargs):
+        # Kwartal zawsze spojny z miesiacem; target kwartalny nie ma miesiaca.
+        if self.typ == self.Typ.MIESIECZNY and self.miesiac:
+            self.kwartal = self.kwartal_dla_miesiaca(self.miesiac)
+        elif self.typ == self.Typ.KWARTALNY:
+            self.miesiac = None
+        super().save(*args, **kwargs)
+
+    MIESIACE_PL = {
+        1: 'Styczeń', 2: 'Luty', 3: 'Marzec', 4: 'Kwiecień', 5: 'Maj', 6: 'Czerwiec',
+        7: 'Lipiec', 8: 'Sierpień', 9: 'Wrzesień', 10: 'Październik', 11: 'Listopad', 12: 'Grudzień',
+    }
+
+    @property
+    def nazwa_okresu(self):
+        if self.miesiac:
+            return f"{self.MIESIACE_PL.get(self.miesiac, self.miesiac)} {self.rok}"
+        return f"{self.rok} Q{self.kwartal}"
+
+    def __str__(self):
+        if self.miesiac:
+            return f"{self.hala.nazwa} {self.rok}-{self.miesiac:02d}: B{self.cel_beko}/W{self.cel_whirlpool}"
+        return f"{self.hala.nazwa} {self.rok} Q{self.kwartal}: B{self.cel_beko}/W{self.cel_whirlpool}"

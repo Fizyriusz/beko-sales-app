@@ -1,0 +1,52 @@
+{% extends "produkty/base.html" %}
+
+{% block title %}Przypisz sprzedaż do konta{% endblock %}
+
+{% block content %}
+<div class="container mt-4">
+    <h2>Przypisz historyczną sprzedaż do konta</h2>
+
+    <div class="alert alert-info">
+        <i class="fas fa-circle-info me-1"></i>
+        Do tej pory sprzedaż nie była powiązana z konkretnym kontem. Realizacja targetu hali liczy się
+        ze sprzedaży <strong>przypisanych do niej pracowników</strong>, więc stare rekordy bez konta
+        nie zostaną policzone. Tutaj możesz przypisać je hurtowo do właściwego konta.
+        <br><br>
+        Nowa sprzedaż rejestrowana od teraz automatycznie zapisuje konto osoby, która ją wprowadza.
+    </div>
+
+    <div class="card mb-3" style="max-width:640px;">
+        <div class="card-body">
+            <p class="mb-2">
+                Rekordów sprzedaży bez przypisanego konta:
+                <span class="badge {% if liczba_bez_uzytkownika %}bg-warning text-dark{% else %}bg-success{% endif %} fs-6">
+                    {{ liczba_bez_uzytkownika }}
+                </span>
+            </p>
+
+            {% if liczba_bez_uzytkownika %}
+            <form method="post">
+                {% csrf_token %}
+                <div class="mb-3">
+                    <label class="form-label">Przypisz całą tę sprzedaż do konta:</label>
+                    <select name="user" class="form-select" required>
+                        <option value="">— wybierz konto —</option>
+                        {% for k in konta %}
+                        <option value="{{ k.id }}">{{ k.username }}{% if k.is_staff %} (admin){% endif %}</option>
+                        {% endfor %}
+                    </select>
+                </div>
+                <button type="submit" class="btn btn-primary"
+                        onclick="return confirm('Przypisać {{ liczba_bez_uzytkownika }} rekordów sprzedaży do wybranego konta?');">
+                    Przypisz {{ liczba_bez_uzytkownika }} rekordów
+                </button>
+            </form>
+            {% else %}
+            <p class="text-success mb-0"><i class="fas fa-check"></i> Cała sprzedaż ma już przypisane konto.</p>
+            {% endif %}
+        </div>
+    </div>
+
+    <a href="{% url 'produkty:hale_lista' %}" class="btn btn-outline-secondary btn-sm">← Hale i targety</a>
+</div>
+{% endblock %}

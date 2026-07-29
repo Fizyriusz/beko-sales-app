@@ -118,6 +118,60 @@ class PodpowiedzForm(forms.ModelForm):
         }
 
 
+from .models import Hala, TargetHali
+
+MIESIACE_PL = [
+    (1, 'Styczeń'), (2, 'Luty'), (3, 'Marzec'), (4, 'Kwiecień'),
+    (5, 'Maj'), (6, 'Czerwiec'), (7, 'Lipiec'), (8, 'Sierpień'),
+    (9, 'Wrzesień'), (10, 'Październik'), (11, 'Listopad'), (12, 'Grudzień'),
+]
+
+
+class HalaForm(forms.ModelForm):
+    class Meta:
+        model = Hala
+        fields = ['nazwa', 'opis', 'pracownicy', 'aktywna']
+        widgets = {
+            'nazwa': forms.TextInput(attrs={'class': 'form-control', 'placeholder': 'np. Media Expert Rzeszów'}),
+            'opis': forms.Textarea(attrs={'class': 'form-control', 'rows': 2}),
+            'pracownicy': forms.SelectMultiple(attrs={'class': 'form-select', 'size': '8'}),
+            'aktywna': forms.CheckboxInput(attrs={'class': 'form-check-input'}),
+        }
+
+
+class TargetHaliForm(forms.ModelForm):
+    miesiac = forms.TypedChoiceField(
+        choices=[('', '— (target kwartalny) —')] + MIESIACE_PL,
+        coerce=int, required=False, empty_value=None,
+        widget=forms.Select(attrs={'class': 'form-select'}), label="Miesiąc",
+    )
+
+    class Meta:
+        model = TargetHali
+        fields = ['typ', 'rok', 'kwartal', 'miesiac', 'cel_beko', 'cel_whirlpool']
+        widgets = {
+            'typ': forms.Select(attrs={'class': 'form-select'}),
+            'rok': forms.NumberInput(attrs={'class': 'form-control', 'min': 2020, 'max': 2100}),
+            'kwartal': forms.Select(attrs={'class': 'form-select'}),
+            'cel_beko': forms.NumberInput(attrs={'class': 'form-control', 'min': 0}),
+            'cel_whirlpool': forms.NumberInput(attrs={'class': 'form-control', 'min': 0}),
+        }
+
+    def clean(self):
+        cleaned = super().clean()
+        typ = cleaned.get('typ')
+        miesiac = cleaned.get('miesiac')
+
+        if typ == TargetHali.Typ.MIESIECZNY and not miesiac:
+            self.add_error('miesiac', "Target miesięczny wymaga wskazania miesiąca.")
+        if typ == TargetHali.Typ.KWARTALNY:
+            cleaned['miesiac'] = None
+
+        if cleaned.get('cel_beko') in (None, 0) and cleaned.get('cel_whirlpool') in (None, 0):
+            self.add_error(None, "Podaj cel dla Beko lub dla Whirlpool (albo dla obu).")
+        return cleaned
+
+
 from .models import Alejka, ObiektMapy
 
 class AlejkaForm(forms.ModelForm):

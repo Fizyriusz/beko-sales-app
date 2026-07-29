@@ -1,0 +1,27 @@
+{% extends "produkty/base.html" %}
+
+{% block title %}Usuń halę{% endblock %}
+
+{% block content %}
+<div class="container mt-4">
+    <div class="card border-danger" style="max-width:640px;">
+        <div class="card-header bg-danger text-white">Usuwanie hali</div>
+        <div class="card-body">
+            <p>Czy na pewno chcesz usunąć halę <strong>„{{ hala.nazwa }}"</strong>?</p>
+            <ul>
+                <li>Przypisanych pracowników: <strong>{{ hala.pracownicy.count }}</strong></li>
+                <li>Targetów do usunięcia: <strong>{{ liczba_targetow }}</strong></li>
+            </ul>
+            <div class="alert alert-warning">
+                Usunięte zostaną hala i jej targety. <strong>Konta pracowników i historia sprzedaży pozostają nietknięte</strong> —
+                zniknie tylko powiązanie z tą lokalizacją i jej cele.
+            </div>
+            <form method="post">
+                {% csrf_token %}
+                <button type="submit" class="btn btn-danger">Tak, usuń halę</button>
+                <a href="{% url 'produkty:hale_lista' %}" class="btn btn-secondary">Anuluj</a>
+            </form>
+        </div>
+    </div>
+</div>
+{% endblock %}

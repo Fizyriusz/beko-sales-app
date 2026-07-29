@@ -1,0 +1,183 @@
+{% extends "produkty/base.html" %}
+
+{% block title %}Realizacja targetu{% endblock %}
+
+{% block content %}
+<div class="container mt-4">
+    <h2 class="mb-3">Realizacja targetu</h2>
+
+    <form method="get" class="row g-2 align-items-end mb-3">
+        {% if dostepne_hale|length > 1 %}
+        <div class="col-12 col-sm-4">
+            <label class="form-label small mb-1">Hala</label>
+            <select class="form-select" onchange="location.href=this.value;">
+                {% for h in dostepne_hale %}
+                <option value="{% url 'produkty:realizacja_targetu_hali' h.id %}?rok={{ rok }}&kwartal={{ kwartal }}"
+                        {% if hala and h.id == hala.id %}selected{% endif %}>{{ h.nazwa }}</option>
+                {% endfor %}
+            </select>
+        </div>
+        {% endif %}
+        <div class="col-6 col-sm-3">
+            <label class="form-label small mb-1">Rok</label>
+            <select name="rok" class="form-select">
+                {% for r in lata %}<option value="{{ r }}" {% if r == rok %}selected{% endif %}>{{ r }}</option>{% endfor %}
+            </select>
+        </div>
+        <div class="col-6 col-sm-3">
+            <label class="form-label small mb-1">Kwartał</label>
+            <select name="kwartal" class="form-select">
+                {% for q in kwartaly %}<option value="{{ q }}" {% if q == kwartal %}selected{% endif %}>Q{{ q }}</option>{% endfor %}
+            </select>
+        </div>
+        <div class="col-12 col-sm-2 d-grid">
+            <button type="submit" class="btn btn-primary">Pokaż</button>
+        </div>
+    </form>
+
+    {% if not hala %}
+        <div class="alert alert-warning">
+            {% if user.is_staff %}
+                Brak aktywnych hal. Utwórz halę w <a href="{% url 'produkty:hale_lista' %}">Hale i targety</a>.
+            {% else %}
+                Nie jesteś przypisany do żadnej hali. Poproś administratora o dopisanie Cię do lokalizacji.
+            {% endif %}
+        </div>
+    {% else %}
+        <div class="d-flex justify-content-between align-items-center flex-wrap gap-2 mb-2">
+            <h4 class="mb-0">{{ hala.nazwa }} — {{ rok }} Q{{ kwartal }}</h4>
+            {% if user.is_staff %}
+            <a href="{% url 'produkty:hala_edytuj' hala.id %}" class="btn btn-outline-secondary btn-sm">Ustaw targety</a>
+            {% endif %}
+        </div>
+
+        {% if postep.liczba_pracownikow == 0 %}
+        <div class="alert alert-warning small">
+            <i class="fas fa-triangle-exclamation me-1"></i>
+            Do tej hali nie jest przypisany żaden pracownik, więc realizacja wynosi 0.
+            {% if user.is_staff %}Dopisz pracowników w <a href="{% url 'produkty:hala_edytuj' hala.id %}">edycji hali</a>.{% endif %}
+        </div>
+        {% endif %}
+
+        <!-- Rozliczenie kwartalne -->
+        <div class="row mb-4">
+            <div class="col-md-6 mb-3">
+                <div class="card h-100 border-primary">
+                    <div class="card-header bg-primary text-white">Grupa Beko — rozliczenie kwartalne</div>
+                    <div class="card-body">
+                        <p class="text-muted small mb-2">Marki: {% for m in grupa_beko_marki %}{{ m }}{% if not forloop.last %}, {% endif %}{% endfor %}</p>
+                        <h3 class="mb-1">{{ postep.suma.real_beko }} / {{ postep.suma.cel_beko }} szt.</h3>
+                        {% if postep.suma.proc_beko != None %}
+                        <div class="progress mb-1" style="height:22px;">
+                            <div class="progress-bar {% if postep.suma.proc_beko >= 100 %}bg-success{% elif postep.suma.proc_beko >= 70 %}bg-info{% else %}bg-warning{% endif %}"
+                                 role="progressbar" style="width: {% if postep.suma.proc_beko > 100 %}100{% else %}{{ postep.suma.proc_beko }}{% endif %}%;">
+                                {{ postep.suma.proc_beko }}%
+                            </div>
+                        </div>
+                        {% if postep.suma.brakuje_beko %}
+                        <small class="text-muted">Do celu brakuje {{ postep.suma.brakuje_beko }} szt.</small>
+                        {% else %}
+                        <small class="text-success"><i class="fas fa-check"></i> Target osiągnięty</small>
+                        {% endif %}
+                        {% else %}
+                        <p class="text-muted mb-0"><em>Nie ustawiono celu na ten kwartał.</em></p>
+                        {% endif %}
+                    </div>
+                </div>
+            </div>
+            <div class="col-md-6 mb-3">
+                <div class="card h-100 border-dark">
+                    <div class="card-header bg-dark text-white">Grupa Whirlpool — rozliczenie kwartalne</div>
+                    <div class="card-body">
+                        <p class="text-muted small mb-2">Marki: {% for m in grupa_whirlpool_marki %}{{ m }}{% if not forloop.last %}, {% endif %}{% endfor %}</p>
+                        <h3 class="mb-1">{{ postep.suma.real_whirlpool }} / {{ postep.suma.cel_whirlpool }} szt.</h3>
+                        {% if postep.suma.proc_whirlpool != None %}
+                        <div class="progress mb-1" style="height:22px;">
+                            <div class="progress-bar {% if postep.suma.proc_whirlpool >= 100 %}bg-success{% elif postep.suma.proc_whirlpool >= 70 %}bg-info{% else %}bg-warning{% endif %}"
+                                 role="progressbar" style="width: {% if postep.suma.proc_whirlpool > 100 %}100{% else %}{{ postep.suma.proc_whirlpool }}{% endif %}%;">
+                                {{ postep.suma.proc_whirlpool }}%
+                            </div>
+                        </div>
+                        {% if postep.suma.brakuje_whirlpool %}
+                        <small class="text-muted">Do celu brakuje {{ postep.suma.brakuje_whirlpool }} szt.</small>
+                        {% else %}
+                        <small class="text-success"><i class="fas fa-check"></i> Target osiągnięty</small>
+                        {% endif %}
+                        {% else %}
+                        <p class="text-muted mb-0"><em>Nie ustawiono celu na ten kwartał.</em></p>
+                        {% endif %}
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        {% if postep.target_kwartalny %}
+        <p class="small text-muted">
+            <i class="fas fa-circle-info me-1"></i>
+            Dla tego kwartału ustawiono <strong>target kwartalny</strong> — rozliczenie powyżej pochodzi z niego,
+            a tabela poniżej pokazuje przebieg miesięczny.
+        </p>
+        {% else %}
+        <p class="small text-muted">
+            <i class="fas fa-circle-info me-1"></i>
+            Rozliczenie kwartalne to <strong>suma celów miesięcznych</strong> z tego kwartału.
+        </p>
+        {% endif %}
+
+        <!-- Rozbicie miesięczne -->
+        <div class="card">
+            <div class="card-header bg-light">Przebieg miesięczny</div>
+            <div class="card-body p-0">
+                <div class="table-responsive">
+                    <table class="table table-bordered mb-0 align-middle">
+                        <thead class="table-dark">
+                            <tr>
+                                <th>Miesiąc</th>
+                                <th class="text-center">Beko (real. / cel)</th>
+                                <th style="min-width:140px;">Beko %</th>
+                                <th class="text-center">Whirlpool (real. / cel)</th>
+                                <th style="min-width:140px;">Whirlpool %</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for w in postep.wiersze %}
+                            <tr>
+                                <td>
+                                    <strong>{{ w.nazwa }}</strong>
+                                    {% if not w.ma_target %}<br><small class="text-muted">brak celu</small>{% endif %}
+                                </td>
+                                <td class="text-center">{{ w.real_beko }} / {{ w.cel_beko }}</td>
+                                <td>
+                                    {% if w.proc_beko != None %}
+                                    <div class="progress" style="height:18px;">
+                                        <div class="progress-bar {% if w.proc_beko >= 100 %}bg-success{% elif w.proc_beko >= 70 %}bg-info{% else %}bg-warning{% endif %}"
+                                             style="width: {% if w.proc_beko > 100 %}100{% else %}{{ w.proc_beko }}{% endif %}%;">{{ w.proc_beko }}%</div>
+                                    </div>
+                                    {% else %}<span class="text-muted">—</span>{% endif %}
+                                </td>
+                                <td class="text-center">{{ w.real_whirlpool }} / {{ w.cel_whirlpool }}</td>
+                                <td>
+                                    {% if w.proc_whirlpool != None %}
+                                    <div class="progress" style="height:18px;">
+                                        <div class="progress-bar {% if w.proc_whirlpool >= 100 %}bg-success{% elif w.proc_whirlpool >= 70 %}bg-info{% else %}bg-warning{% endif %}"
+                                             style="width: {% if w.proc_whirlpool > 100 %}100{% else %}{{ w.proc_whirlpool }}{% endif %}%;">{{ w.proc_whirlpool }}%</div>
+                                    </div>
+                                    {% else %}<span class="text-muted">—</span>{% endif %}
+                                </td>
+                            </tr>
+                            {% endfor %}
+                            <tr class="table-success fw-bold">
+                                <td>Razem kwartał</td>
+                                <td class="text-center">{{ postep.suma.real_beko }} / {{ postep.suma.cel_beko }}</td>
+                                <td>{% if postep.suma.proc_beko != None %}{{ postep.suma.proc_beko }}%{% else %}—{% endif %}</td>
+                                <td class="text-center">{{ postep.suma.real_whirlpool }} / {{ postep.suma.cel_whirlpool }}</td>
+                                <td>{% if postep.suma.proc_whirlpool != None %}{{ postep.suma.proc_whirlpool }}%{% else %}—{% endif %}</td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+    {% endif %}
+</div>
+{% endblock %}

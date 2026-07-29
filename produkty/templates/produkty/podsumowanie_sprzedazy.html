@@ -53,6 +53,87 @@
 <p><strong>Liczba sprzedanych sztuk:</strong> {{ liczba_sztuk }}</p>
 <p><strong>Całkowita prowizja:</strong> {{ calkowita_prowizja }} PLN</p>
 
+<!-- Podział na grupy targetowe -->
+<div class="row mb-4">
+    <div class="col-md-4 mb-2">
+        <div class="card border-primary h-100">
+            <div class="card-body py-3">
+                <h6 class="text-uppercase text-muted mb-1" style="font-size:0.75rem;">Grupa Beko</h6>
+                <div class="small text-muted mb-2">{% for m in grupa_beko_marki %}{{ m }}{% if not forloop.last %} + {% endif %}{% endfor %}</div>
+                <div class="fs-3 fw-bold text-primary">{{ suma_beko.sztuki }} szt.</div>
+                <div class="small">{{ suma_beko.prowizja|floatformat:2 }} PLN · {{ suma_beko.modele }} modeli</div>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-4 mb-2">
+        <div class="card border-dark h-100">
+            <div class="card-body py-3">
+                <h6 class="text-uppercase text-muted mb-1" style="font-size:0.75rem;">Grupa Whirlpool</h6>
+                <div class="small text-muted mb-2">{% for m in grupa_whirlpool_marki %}{{ m }}{% if not forloop.last %} + {% endif %}{% endfor %}</div>
+                <div class="fs-3 fw-bold">{{ suma_whirlpool.sztuki }} szt.</div>
+                <div class="small">{{ suma_whirlpool.prowizja|floatformat:2 }} PLN · {{ suma_whirlpool.modele }} modeli</div>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-4 mb-2">
+        <div class="card h-100">
+            <div class="card-body py-3">
+                <h6 class="text-uppercase text-muted mb-1" style="font-size:0.75rem;">Pozostałe marki</h6>
+                <div class="small text-muted mb-2">nie liczą się do targetów</div>
+                <div class="fs-3 fw-bold text-secondary">{{ suma_inne.sztuki }} szt.</div>
+                <div class="small">{{ suma_inne.prowizja|floatformat:2 }} PLN · {{ suma_inne.modele }} modeli</div>
+            </div>
+        </div>
+    </div>
+</div>
+
+{% if postep_targetu %}
+<!-- Realizacja targetu hali (kwartał obejmujący wybrany okres) -->
+<div class="card mb-4">
+    <div class="card-header d-flex justify-content-between align-items-center flex-wrap gap-2">
+        <span><i class="fas fa-bullseye me-1"></i> Target: {{ postep_targetu.hala.nazwa }} — {{ postep_targetu.rok }} Q{{ postep_targetu.kwartal }}</span>
+        <a href="{% url 'produkty:realizacja_targetu_hali' postep_targetu.hala.id %}?rok={{ postep_targetu.rok }}&kwartal={{ postep_targetu.kwartal }}"
+           class="btn btn-sm btn-outline-success">Szczegóły realizacji</a>
+    </div>
+    <div class="card-body">
+        <div class="row">
+            <div class="col-md-6 mb-2">
+                <div class="d-flex justify-content-between small mb-1">
+                    <strong>Beko (kwartał)</strong>
+                    <span>{{ postep_targetu.suma.real_beko }} / {{ postep_targetu.suma.cel_beko }} szt.</span>
+                </div>
+                {% if postep_targetu.suma.proc_beko != None %}
+                <div class="progress" style="height:20px;">
+                    <div class="progress-bar {% if postep_targetu.suma.proc_beko >= 100 %}bg-success{% elif postep_targetu.suma.proc_beko >= 70 %}bg-info{% else %}bg-warning{% endif %}"
+                         style="width: {% if postep_targetu.suma.proc_beko > 100 %}100{% else %}{{ postep_targetu.suma.proc_beko }}{% endif %}%;">
+                        {{ postep_targetu.suma.proc_beko }}%
+                    </div>
+                </div>
+                {% else %}<span class="text-muted small">Brak celu na ten kwartał.</span>{% endif %}
+            </div>
+            <div class="col-md-6 mb-2">
+                <div class="d-flex justify-content-between small mb-1">
+                    <strong>Whirlpool (kwartał)</strong>
+                    <span>{{ postep_targetu.suma.real_whirlpool }} / {{ postep_targetu.suma.cel_whirlpool }} szt.</span>
+                </div>
+                {% if postep_targetu.suma.proc_whirlpool != None %}
+                <div class="progress" style="height:20px;">
+                    <div class="progress-bar {% if postep_targetu.suma.proc_whirlpool >= 100 %}bg-success{% elif postep_targetu.suma.proc_whirlpool >= 70 %}bg-info{% else %}bg-warning{% endif %}"
+                         style="width: {% if postep_targetu.suma.proc_whirlpool > 100 %}100{% else %}{{ postep_targetu.suma.proc_whirlpool }}{% endif %}%;">
+                        {{ postep_targetu.suma.proc_whirlpool }}%
+                    </div>
+                </div>
+                {% else %}<span class="text-muted small">Brak celu na ten kwartał.</span>{% endif %}
+            </div>
+        </div>
+        <p class="small text-muted mb-0 mt-2">
+            Realizacja liczona ze sprzedaży pracowników przypisanych do hali (w całym kwartale),
+            niezależnie od filtra daty powyżej.
+        </p>
+    </div>
+</div>
+{% endif %}
+
 <h2>Sprzedane produkty:</h2>
 {% if grupa_beko %}
 <h3>Grupa Beko</h3>

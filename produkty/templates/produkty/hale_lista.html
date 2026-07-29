@@ -1,0 +1,92 @@
+{% extends "produkty/base.html" %}
+
+{% block title %}Hale i targety{% endblock %}
+
+{% block content %}
+<div class="container mt-4">
+    <div class="d-flex justify-content-between align-items-center flex-wrap gap-2 mb-3">
+        <h2 class="mb-0">Hale i targety</h2>
+        <a href="{% url 'produkty:realizacja_targetu' %}" class="btn btn-outline-success btn-sm">
+            <i class="fas fa-bullseye"></i> Podgląd realizacji
+        </a>
+    </div>
+
+    <div class="alert alert-light border small">
+        <i class="fas fa-circle-info me-1"></i>
+        Hala to lokalizacja z przypisanymi pracownikami. Realizacja targetu liczona jest ze sprzedaży
+        zaraportowanej przez <strong>pracowników przypisanych do hali</strong>.
+        Target <strong>Beko</strong> realizują marki BEKO i GRUNDIG,
+        target <strong>Whirlpool</strong> — WHIRLPOOL, HOTPOINT i INDESIT.
+    </div>
+
+    <div class="row">
+        <div class="col-lg-4 mb-3">
+            <div class="card">
+                <div class="card-header bg-primary text-white">Dodaj halę</div>
+                <div class="card-body">
+                    <form method="post">
+                        {% csrf_token %}
+                        <div class="mb-2"><label class="form-label">Nazwa</label>{{ form.nazwa }}</div>
+                        <div class="mb-2"><label class="form-label">Opis / lokalizacja</label>{{ form.opis }}</div>
+                        <div class="mb-2">
+                            <label class="form-label">Pracownicy</label>
+                            {{ form.pracownicy }}
+                            <div class="form-text">Przytrzymaj Ctrl, aby wybrać kilka osób. Możesz też dopisać ich później.</div>
+                        </div>
+                        <div class="form-check mb-3">{{ form.aktywna }}<label class="form-check-label">Aktywna</label></div>
+                        {% if form.errors %}<div class="alert alert-danger py-1 small">Popraw błędy w formularzu.</div>{% endif %}
+                        <button type="submit" class="btn btn-primary w-100">Dodaj halę</button>
+                    </form>
+                </div>
+            </div>
+        </div>
+
+        <div class="col-lg-8 mb-3">
+            <div class="card">
+                <div class="card-header bg-dark text-white">Hale ({{ hale|length }})</div>
+                <div class="card-body p-0">
+                    <table class="table table-striped mb-0 align-middle">
+                        <thead>
+                            <tr>
+                                <th>Nazwa</th>
+                                <th class="text-center">Pracownicy</th>
+                                <th class="text-center">Targety</th>
+                                <th class="text-center">Aktywna</th>
+                                <th class="text-end">Akcje</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for h in hale %}
+                            <tr>
+                                <td>
+                                    <strong>{{ h.nazwa }}</strong>
+                                    {% if h.opis %}<br><small class="text-muted">{{ h.opis|truncatechars:60 }}</small>{% endif %}
+                                </td>
+                                <td class="text-center">
+                                    {% if h.pracownicy.all %}
+                                        <span class="badge bg-info text-dark" title="{% for p in h.pracownicy.all %}{{ p.username }} {% endfor %}">{{ h.pracownicy.count }}</span>
+                                    {% else %}
+                                        <span class="badge bg-warning text-dark">brak</span>
+                                    {% endif %}
+                                </td>
+                                <td class="text-center">{{ h.targety.count }}</td>
+                                <td class="text-center">
+                                    {% if h.aktywna %}<span class="badge bg-success">Tak</span>{% else %}<span class="badge bg-secondary">Nie</span>{% endif %}
+                                </td>
+                                <td class="text-end">
+                                    <a href="{% url 'produkty:realizacja_targetu_hali' h.id %}" class="btn btn-sm btn-success">Realizacja</a>
+                                    <a href="{% url 'produkty:hala_edytuj' h.id %}" class="btn btn-sm btn-warning">Edytuj / targety</a>
+                                    <a href="{% url 'produkty:hala_usun' h.id %}" class="btn btn-sm btn-danger">Usuń</a>
+                                </td>
+                            </tr>
+                            {% empty %}
+                            <tr><td colspan="5" class="text-center">Brak hal. Dodaj pierwszą po lewej.</td></tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
