@@ -1,7 +1,8 @@
 from django.shortcuts import render, redirect, get_object_or_404
 from django.contrib import messages
-from .models import Produkt, Sprzedaz, Zadanie, Ekspozycja, GrupaProduktowa, Marka, KlientCounter, DzienPracy, GrafikPracy, PunktChecklisty, OdpowiedzChecklisty, TopGroup, TopSubGroup, TopListEntry, Alejka, MiejsceProduktu, ObiektMapy
-from .forms import ZadanieForm, ProduktForm, AlejkaForm, ObiektMapyForm
+from .models import Produkt, Sprzedaz, Zadanie, Ekspozycja, GrupaProduktowa, Marka, KlientCounter, DzienPracy, GrafikPracy, PunktChecklisty, OdpowiedzChecklisty, TopGroup, TopSubGroup, TopListEntry, Alejka, MiejsceProduktu, ObiektMapy, Hala, TargetHali, \
+GRUPA_BEKO_MARKI, GRUPA_WHIRLPOOL_MARKI
+from .forms import ZadanieForm, ProduktForm, AlejkaForm, ObiektMapyForm, HalaForm, TargetHaliForm
 import openpyxl
 from openpyxl.utils.exceptions import InvalidFileException
 from zipfile import BadZipFile
@@ -13,7 +14,7 @@ from collections import defaultdict
 from datetime import timedelta, datetime
 from rapidfuzz import fuzz, process 
 import re
-from django.db import models
+from django.db import models, IntegrityError
 from django.http import HttpResponse, JsonResponse
 from django.contrib.auth.decorators import login_required
 from django.contrib.admin.views.decorators import staff_member_required
@@ -191,7 +192,7 @@ def import_excel(request):
 logger = logging.getLogger(__name__)
 
 
-def _zapisz_sprzedaz_i_zadania(zatwierdzone_modele, data_sprzedazy, nowe_modele_marki=None):
+def _zapisz_sprzedaz_i_zadania(zatwierdzone_modele, data_sprzedazy, nowe_modele_marki=None, user=None):
     if nowe_modele_marki is None:
         nowe_modele_marki = {}
 
@@ -207,7 +208,8 @@ def _zapisz_sprzedaz_i_zadania(zatwierdzone_modele, data_sprzedazy, nowe_modele_
         sprzedaz = Sprzedaz.objects.create(
             produkt=produkt,
             data_sprzedazy=data_sprzedazy,
-            liczba_sztuk=1
+            liczba_sztuk=1,
+            user=user,
         )
 
         # Tylko zadania obejmujace ten produkt i aktywne w dniu sprzedazy.
@@ -262,7 +264,7 @@ def sprzedaz(request):
                     nowe_modele_marki[model] = marka_nazwa
                     zatwierdzone_modele.append(model)
 
-            _zapisz_sprzedaz_i_zadania(zatwierdzone_modele, data_sprzedazy, nowe_modele_marki)
+            _zapisz_sprzedaz_i_zadania(zatwierdzone_modele, data_sprzedazy, nowe_modele_marki, user=request.user)
             return redirect('produkty:sprzedaz_sukces')
 
         data_sprzedazy = request.POST.get('data_sprzedazy')
@@ -300,7 +302,7 @@ def sprzedaz(request):
             }
             return render(request, 'produkty/sprzedaz_sugestie.html', context)
 
-        _zapisz_sprzedaz_i_zadania(zatwierdzone_modele, data_sprzedazy)
+        _zapisz_sprzedaz_i_zadania(zatwierdzone_modele, data_sprzedazy, user=request.user)
         return redirect('produkty:sprzedaz_sukces')
 
     prefilled_model = request.GET.get('model', '')
@@ -421,8 +423,8 @@ def podsumowanie_sprzedazy(request):
                     'premia': premia
                 })
 
-    grupa_beko_marki = ['BEKO', 'GRUNDIG']
-    grupa_whirlpool_marki = ['WHIRLPOOL', 'INDESIT', 'HOTPOINT']
+    grupa_beko_marki = list(GRUPA_BEKO_MARKI)
+    grupa_whirlpool_marki = list(GRUPA_WHIRLPOOL_MARKI)
 
     grupa_beko = []
     grupa_whirlpool = []
@@ -437,10 +439,31 @@ def podsumowanie_sprzedazy(request):
         else:
             inne.append(s)
 
+    def _podsumuj(wiersze):
+        return {
+            'sztuki': sum(w['liczba_sztuk'] or 0 for w in wiersze),
+            'prowizja': sum((w['suma_prowizji'] or Decimal('0.00')) for w in wiersze),
+            'modele': len(wiersze),
+        }
+
+    suma_beko = _podsumuj(grupa_beko)
+    suma_whirlpool = _podsumuj(grupa_whirlpool)
+    suma_inne = _podsumuj(inne)
+
     agregaty = sprzedaz_annotated.aggregate(
         calkowita_liczba_sztuk=Sum('liczba_sztuk'),
         calkowita_prowizja=Sum('obliczona_prowizja')
     )
+
+    # Postep targetu hali dla kwartalu obejmujacego wybrany okres.
+    postep_targetu = None
+    hale_uzytkownika = request.user.hale.filter(aktywna=True) if request.user.is_authenticated else Hala.objects.none()
+    hala_uzytkownika = hale_uzytkownika.first()
+    if hala_uzytkownika:
+        baza = data_od or datetime.now().date()
+        postep_targetu = _postep_kwartalu(
+            hala_uzytkownika, baza.year, TargetHali.kwartal_dla_miesiaca(baza.month)
+        )
 
     # Pobranie unikalnych marek dla filtra
     dostepne_marki = Produkt.objects.exclude(marka__isnull=True).exclude(marka='').exclude(marka='Nieznana').exclude(marka='NIEZNANA').values_list('marka', flat=True).distinct().order_by('marka')
@@ -449,6 +472,12 @@ def podsumowanie_sprzedazy(request):
         'grupa_beko': grupa_beko,
         'grupa_whirlpool': grupa_whirlpool,
         'grupa_inne': inne,
+        'suma_beko': suma_beko,
+        'suma_whirlpool': suma_whirlpool,
+        'suma_inne': suma_inne,
+        'grupa_beko_marki': grupa_beko_marki,
+        'grupa_whirlpool_marki': grupa_whirlpool_marki,
+        'postep_targetu': postep_targetu,
         'liczba_sztuk': agregaty['calkowita_liczba_sztuk'] or 0,
         'calkowita_prowizja': agregaty['calkowita_prowizja'] or 0,
         'data_od': data_od,
@@ -2141,3 +2170,253 @@ def polecane_modele(request, year=None, month=None):
         'next_month': next_month,
     }
     return render(request, 'produkty/polecane_modele.html', context)
+
+
+# ==== Hale i targety ====
+
+MIESIACE_PL = {
+    1: 'Styczeń', 2: 'Luty', 3: 'Marzec', 4: 'Kwiecień', 5: 'Maj', 6: 'Czerwiec',
+    7: 'Lipiec', 8: 'Sierpień', 9: 'Wrzesień', 10: 'Październik', 11: 'Listopad', 12: 'Grudzień',
+}
+
+
+def _q_marki(marki):
+    """Warunek dopasowania marki niezaleznie od wielkosci liter."""
+    q = Q()
+    for m in marki:
+        q |= Q(produkt__marka__iexact=m)
+    return q
+
+
+def _sprzedaz_grup(data_od, data_do, uzytkownicy=None):
+    """Zwraca (sztuki_beko, sztuki_whirlpool) w okresie.
+    Grupa Beko = BEKO + GRUNDIG, grupa Whirlpool = WHIRLPOOL + HOTPOINT + INDESIT.
+    Gdy podano uzytkownikow, liczy tylko ich sprzedaz (rozliczenie hali)."""
+    qs = Sprzedaz.objects.filter(data_sprzedazy__gte=data_od, data_sprzedazy__lte=data_do)
+    if uzytkownicy is not None:
+        qs = qs.filter(user__in=uzytkownicy)
+
+    def suma(marki):
+        return qs.filter(_q_marki(marki)).aggregate(s=Sum('liczba_sztuk'))['s'] or 0
+
+    return suma(GRUPA_BEKO_MARKI), suma(GRUPA_WHIRLPOOL_MARKI)
+
+
+def _procent(realizacja, cel):
+    if not cel:
+        return None
+    return round(realizacja * 100.0 / cel, 1)
+
+
+def _zakres_miesiaca(rok, miesiac):
+    from datetime import date as _date
+    ostatni = calendar.monthrange(rok, miesiac)[1]
+    return _date(rok, miesiac, 1), _date(rok, miesiac, ostatni)
+
+
+def _postep_kwartalu(hala, rok, kwartal):
+    """Realizacja targetu hali w danym kwartale.
+    Obsluguje oba tryby: cele miesieczne (suma = rozliczenie kwartalne)
+    oraz jeden cel na caly kwartal."""
+    pracownicy = list(hala.pracownicy.all())
+    miesiace = TargetHali.miesiace_kwartalu(kwartal)
+
+    targety_mies = {
+        t.miesiac: t for t in hala.targety.filter(rok=rok, miesiac__in=miesiace)
+    }
+    target_kw = hala.targety.filter(rok=rok, kwartal=kwartal, miesiac__isnull=True).first()
+
+    wiersze = []
+    suma_cel_b = suma_cel_w = suma_real_b = suma_real_w = 0
+    for m in miesiace:
+        data_od, data_do = _zakres_miesiaca(rok, m)
+        real_b, real_w = _sprzedaz_grup(data_od, data_do, pracownicy)
+        t = targety_mies.get(m)
+        cel_b = t.cel_beko if t else 0
+        cel_w = t.cel_whirlpool if t else 0
+        wiersze.append({
+            'miesiac': m,
+            'nazwa': MIESIACE_PL[m],
+            'cel_beko': cel_b,
+            'cel_whirlpool': cel_w,
+            'real_beko': real_b,
+            'real_whirlpool': real_w,
+            'proc_beko': _procent(real_b, cel_b),
+            'proc_whirlpool': _procent(real_w, cel_w),
+            'ma_target': t is not None,
+        })
+        suma_cel_b += cel_b
+        suma_cel_w += cel_w
+        suma_real_b += real_b
+        suma_real_w += real_w
+
+    # Gdy ustawiono target kwartalny, on jest celem rozliczeniowym kwartalu.
+    if target_kw:
+        suma_cel_b = target_kw.cel_beko
+        suma_cel_w = target_kw.cel_whirlpool
+
+    return {
+        'hala': hala,
+        'rok': rok,
+        'kwartal': kwartal,
+        'wiersze': wiersze,
+        'target_kwartalny': target_kw,
+        'suma': {
+            'cel_beko': suma_cel_b,
+            'cel_whirlpool': suma_cel_w,
+            'real_beko': suma_real_b,
+            'real_whirlpool': suma_real_w,
+            'proc_beko': _procent(suma_real_b, suma_cel_b),
+            'proc_whirlpool': _procent(suma_real_w, suma_cel_w),
+            'brakuje_beko': max(suma_cel_b - suma_real_b, 0),
+            'brakuje_whirlpool': max(suma_cel_w - suma_real_w, 0),
+        },
+        'liczba_pracownikow': len(pracownicy),
+    }
+
+
+@staff_member_required
+def hale_lista(request):
+    """Lista hal + dodawanie nowej (z przypisaniem pracownikow)."""
+    if request.method == 'POST':
+        form = HalaForm(request.POST)
+        if form.is_valid():
+            hala = form.save()
+            messages.success(request, f"Dodano halę „{hala.nazwa}”.")
+            return redirect('produkty:hala_edytuj', hala_id=hala.id)
+    else:
+        form = HalaForm()
+    return render(request, 'produkty/hale_lista.html', {
+        'form': form,
+        'hale': Hala.objects.all().prefetch_related('pracownicy', 'targety'),
+    })
+
+
+@staff_member_required
+def hala_edytuj(request, hala_id):
+    """Edycja hali (dane, pracownicy) oraz zarzadzanie jej targetami."""
+    hala = get_object_or_404(Hala, id=hala_id)
+    dzis = datetime.now().date()
+
+    form = HalaForm(instance=hala)
+    target_form = TargetHaliForm(initial={
+        'rok': dzis.year,
+        'kwartal': TargetHali.kwartal_dla_miesiaca(dzis.month),
+        'miesiac': dzis.month,
+    })
+
+    if request.method == 'POST':
+        if request.POST.get('typ_formularza') == 'target':
+            target_form = TargetHaliForm(request.POST)
+            if target_form.is_valid():
+                target = target_form.save(commit=False)
+                target.hala = hala
+                try:
+                    target.save()
+                    messages.success(request, "Zapisano target.")
+                    return redirect('produkty:hala_edytuj', hala_id=hala.id)
+                except IntegrityError:
+                    target_form.add_error(None, "Target dla tego okresu już istnieje — usuń go najpierw albo zmień okres.")
+        else:
+            form = HalaForm(request.POST, instance=hala)
+            if form.is_valid():
+                form.save()
+                messages.success(request, "Zapisano halę.")
+                return redirect('produkty:hala_edytuj', hala_id=hala.id)
+
+    return render(request, 'produkty/hala_edytuj.html', {
+        'hala': hala,
+        'form': form,
+        'target_form': target_form,
+        'targety': hala.targety.all(),
+        'miesiace_pl': MIESIACE_PL,
+    })
+
+
+@staff_member_required
+def hala_usun(request, hala_id):
+    hala = get_object_or_404(Hala, id=hala_id)
+    if request.method == 'POST':
+        nazwa = hala.nazwa
+        hala.delete()
+        messages.success(request, f"Usunięto halę „{nazwa}” wraz z jej targetami. Sprzedaż i konta pozostały bez zmian.")
+        return redirect('produkty:hale_lista')
+    return render(request, 'produkty/hala_usun.html', {
+        'hala': hala,
+        'liczba_targetow': hala.targety.count(),
+    })
+
+
+@staff_member_required
+def target_usun(request, target_id):
+    target = get_object_or_404(TargetHali, id=target_id)
+    hala_id = target.hala_id
+    if request.method == 'POST':
+        target.delete()
+        messages.success(request, "Usunięto target.")
+    return redirect('produkty:hala_edytuj', hala_id=hala_id)
+
+
+@login_required
+def realizacja_targetu(request, hala_id=None):
+    """Podglad wykonania targetu. Admin moze wybrac dowolna hale,
+    zwykly uzytkownik widzi hale, do ktorych jest przypisany."""
+    dzis = datetime.now().date()
+    try:
+        rok = int(request.GET.get('rok') or dzis.year)
+    except (TypeError, ValueError):
+        rok = dzis.year
+    try:
+        kwartal = int(request.GET.get('kwartal') or TargetHali.kwartal_dla_miesiaca(dzis.month))
+    except (TypeError, ValueError):
+        kwartal = TargetHali.kwartal_dla_miesiaca(dzis.month)
+    if kwartal not in (1, 2, 3, 4):
+        kwartal = TargetHali.kwartal_dla_miesiaca(dzis.month)
+
+    if request.user.is_staff:
+        dostepne_hale = Hala.objects.filter(aktywna=True)
+    else:
+        dostepne_hale = request.user.hale.filter(aktywna=True)
+
+    hala = None
+    if hala_id:
+        hala = get_object_or_404(dostepne_hale, id=hala_id)
+    elif dostepne_hale.exists():
+        hala = dostepne_hale.first()
+
+    postep = _postep_kwartalu(hala, rok, kwartal) if hala else None
+
+    return render(request, 'produkty/realizacja_targetu.html', {
+        'postep': postep,
+        'hala': hala,
+        'dostepne_hale': dostepne_hale,
+        'rok': rok,
+        'kwartal': kwartal,
+        'lata': range(dzis.year - 2, dzis.year + 2),
+        'kwartaly': [1, 2, 3, 4],
+        'grupa_beko_marki': GRUPA_BEKO_MARKI,
+        'grupa_whirlpool_marki': GRUPA_WHIRLPOOL_MARKI,
+    })
+
+
+@staff_member_required
+def przypisz_sprzedaze(request):
+    """Sprzedaz zapisana przed wprowadzeniem hal nie ma przypisanego sprzedawcy,
+    wiec nie liczy sie do targetow. Tu mozna ja hurtowo przypisac do konta."""
+    bez_uzytkownika = Sprzedaz.objects.filter(user__isnull=True)
+    context = {
+        'liczba_bez_uzytkownika': bez_uzytkownika.count(),
+        'konta': User.objects.order_by('username'),
+    }
+
+    if request.method == 'POST':
+        user_id = request.POST.get('user')
+        if not user_id:
+            messages.error(request, "Wybierz konto, do którego przypisać sprzedaż.")
+        else:
+            cel = get_object_or_404(User, id=user_id)
+            ile = bez_uzytkownika.update(user=cel)
+            messages.success(request, f"Przypisano {ile} rekordów sprzedaży do konta {cel.username}.")
+            return redirect('produkty:przypisz_sprzedaze')
+
+    return render(request, 'produkty/przypisz_sprzedaze.html', context)

@@ -8,6 +8,15 @@ urlpatterns = [
     path('produkty/grupy-marki/', views.grupy_marki_przeglad, name='grupy_marki'),
     path('produkty/zamiana-marka-grupa/', views.zamiana_marka_grupa, name='zamiana_marka_grupa'),
 
+    # Hale i targety
+    path('hale/', views.hale_lista, name='hale_lista'),
+    path('hale/<int:hala_id>/edytuj/', views.hala_edytuj, name='hala_edytuj'),
+    path('hale/<int:hala_id>/usun/', views.hala_usun, name='hala_usun'),
+    path('hale/target/<int:target_id>/usun/', views.target_usun, name='target_usun'),
+    path('target/', views.realizacja_targetu, name='realizacja_targetu'),
+    path('target/<int:hala_id>/', views.realizacja_targetu, name='realizacja_targetu_hali'),
+    path('hale/przypisz-sprzedaze/', views.przypisz_sprzedaze, name='przypisz_sprzedaze'),
+
     # Mapa marketu
     path('mapa/', views.mapa_marketu, name='mapa_marketu'),
     path('mapa/druk/', views.mapa_druk, name='mapa_druk'),
