@@ -76,4 +76,29 @@ document.addEventListener('DOMContentLoaded', function() {
     }
 
     initialize();
+
+    // Pokazywanie sekcji zaleznie od typu zadania.
+    // Sekcje sa tylko ukrywane (display:none), a nie usuwane z formularza,
+    // wiec zapisane wartosci nie sa kasowane przy zapisie.
+    const typSelect = document.getElementById('id_typ');
+    const sekcjaProgi = document.getElementById('sekcja-progi');
+    const sekcjaMix = document.getElementById('sekcja-mix');
+    const poleMnoznik = document.getElementById('pole-mnoznik');
+
+    function przelaczSekcje() {
+        if (!typSelect) return;
+        const typ = typSelect.value;
+        const pokazProgi = typ !== 'MIX_MNOZNIK';
+        const pokazMix = typ === 'MIX_MNOZNIK' || typ === 'MIX_PROWIZJA';
+        const pokazMnoznik = typ === 'MIX_MNOZNIK';
+
+        if (sekcjaProgi) sekcjaProgi.style.display = pokazProgi ? '' : 'none';
+        if (sekcjaMix) sekcjaMix.style.display = pokazMix ? '' : 'none';
+        if (poleMnoznik) poleMnoznik.style.display = pokazMnoznik ? '' : 'none';
+    }
+
+    if (typSelect) {
+        typSelect.addEventListener('change', przelaczSekcje);
+        przelaczSekcje();
+    }
 });
