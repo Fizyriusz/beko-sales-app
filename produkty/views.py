@@ -372,7 +372,8 @@ def podsumowanie_sprzedazy(request):
     # Prowizja = baza (liczba_sztuk * stawka) + bonus z zadan (pole prowizja),
     # spojnie z widokiem dziennym (daily_sales_view).
     sprzedaz_annotated = sprzedaz_qs.annotate(
-        obliczona_prowizja=models.F('liczba_sztuk') * models.F('produkt__stawka') + models.F('prowizja')
+        prowizja_baza=models.F('liczba_sztuk') * models.F('produkt__stawka'),
+        obliczona_prowizja=models.F('liczba_sztuk') * models.F('produkt__stawka') + models.F('prowizja'),
     )
 
     sprzedaz_podsumowanie = (
@@ -399,29 +400,73 @@ def podsumowanie_sprzedazy(request):
             'liczba_sztuk': s['liczba_sztuk']
         }
 
-    # Task rewards computation
+    # ==== Zadania: premie progowe i bonusy mnoznikowe ====
+    # Wczesniej pokazywaly sie tylko zadania z premia progowa > 0, wiec zadania
+    # typu "Mix mnoznik" (bonus naliczany per sprzedaz) nigdy nie byly widoczne,
+    # tak samo jak zadania wykonane, ale bez ustawionej kwoty premii.
+    zakres_od = data_od or data_do
+    zakres_do = data_do or data_od
+
     task_rewards = []
-    if data_od and data_do:
-        tasks = Zadanie.objects.filter(data_start__lte=data_do, data_koniec__gte=data_od)
+    premie_progowe = Decimal("0.00")
+
+    if zakres_od and zakres_do:
+        tasks = Zadanie.objects.filter(
+            data_start__lte=zakres_do, data_koniec__gte=zakres_od
+        ).prefetch_related('produkty')
+
         for task in tasks:
             sales_in_task = Sprzedaz.objects.filter(
                 produkt__in=task.produkty.all(),
                 data_sprzedazy__range=(task.data_start, task.data_koniec)
             )
             total_sold = sales_in_task.aggregate(suma=Sum('liczba_sztuk'))['suma'] or 0
-            
+
             premia = Decimal("0.00")
-            if task.prog_2 and total_sold >= task.prog_2:
-                premia = task.prog_2_premia or Decimal("0.00")
-            elif task.prog_1 and total_sold >= task.prog_1:
-                premia = task.prog_1_premia or Decimal("0.00")
-                
-            if premia > 0:
-                task_rewards.append({
-                    'nazwa': task.nazwa,
-                    'sprzedane': total_sold,
-                    'premia': premia
-                })
+            bonus_mnoznik = Decimal("0.00")
+            prog_osiagniety = None
+            wykonane = False
+
+            if task.typ == Zadanie.Typ.MIX_MNOZNIK:
+                # Bonus tego typu jest juz zapisany przy kazdej sprzedazy (pole prowizja).
+                bonus_mnoznik = sales_in_task.aggregate(s=Sum('prowizja'))['s'] or Decimal("0.00")
+                if task.prog_mix:
+                    wykonane = total_sold >= task.prog_mix
+                    if wykonane:
+                        prog_osiagniety = task.prog_mix
+            else:
+                if task.prog_2 and total_sold >= task.prog_2:
+                    premia = task.prog_2_premia or Decimal("0.00")
+                    prog_osiagniety = task.prog_2
+                    wykonane = True
+                elif task.prog_1 and total_sold >= task.prog_1:
+                    premia = task.prog_1_premia or Decimal("0.00")
+                    prog_osiagniety = task.prog_1
+                    wykonane = True
+
+            premie_progowe += premia
+
+            task_rewards.append({
+                'id': task.id,
+                'nazwa': task.nazwa,
+                'typ': task.get_typ_display(),
+                'sprzedane': total_sold,
+                'prog_1': task.prog_1,
+                'prog_2': task.prog_2,
+                'prog_mix': task.prog_mix,
+                'prog_osiagniety': prog_osiagniety,
+                'premia': premia,
+                'bonus_mnoznik': bonus_mnoznik,
+                'zarobek': premia + bonus_mnoznik,
+                'wykonane': wykonane,
+                'data_start': task.data_start,
+                'data_koniec': task.data_koniec,
+            })
+
+        # Wykonane na gorze, potem wedlug zarobku.
+        task_rewards.sort(key=lambda t: (not t['wykonane'], -t['zarobek'], t['nazwa']))
+
+    zadania_wykonane = [t for t in task_rewards if t['wykonane']]
 
     grupa_beko_marki = list(GRUPA_BEKO_MARKI)
     grupa_whirlpool_marki = list(GRUPA_WHIRLPOOL_MARKI)
@@ -452,8 +497,18 @@ def podsumowanie_sprzedazy(request):
 
     agregaty = sprzedaz_annotated.aggregate(
         calkowita_liczba_sztuk=Sum('liczba_sztuk'),
-        calkowita_prowizja=Sum('obliczona_prowizja')
+        calkowita_prowizja=Sum('obliczona_prowizja'),
+        suma_bazowa=Sum('prowizja_baza'),
+        suma_bonusow=Sum('prowizja'),
     )
+
+    # Rozbicie zarobku: sama sprzedaz vs zadania vs suma.
+    # Bonus mnoznikowy jest zapisany przy sprzedazy (pole prowizja), a premie
+    # progowe licza sie osobno - dzieki temu nic nie jest liczone podwojnie.
+    prowizja_ze_sprzedazy = agregaty['suma_bazowa'] or Decimal("0.00")
+    bonus_mnoznikowy = agregaty['suma_bonusow'] or Decimal("0.00")
+    prowizja_z_zadan = bonus_mnoznikowy + premie_progowe
+    suma_calkowita = prowizja_ze_sprzedazy + prowizja_z_zadan
 
     # Postep targetu hali dla kwartalu obejmujacego wybrany okres.
     postep_targetu = None
@@ -480,6 +535,12 @@ def podsumowanie_sprzedazy(request):
         'postep_targetu': postep_targetu,
         'liczba_sztuk': agregaty['calkowita_liczba_sztuk'] or 0,
         'calkowita_prowizja': agregaty['calkowita_prowizja'] or 0,
+        'prowizja_ze_sprzedazy': prowizja_ze_sprzedazy,
+        'bonus_mnoznikowy': bonus_mnoznikowy,
+        'premie_progowe': premie_progowe,
+        'prowizja_z_zadan': prowizja_z_zadan,
+        'suma_calkowita': suma_calkowita,
+        'zadania_wykonane': zadania_wykonane,
         'data_od': data_od,
         'data_do': data_do,
         'produkt': produkt_nazwa or '',

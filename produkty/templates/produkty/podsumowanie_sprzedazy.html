@@ -51,7 +51,40 @@
 </div>
 
 <p><strong>Liczba sprzedanych sztuk:</strong> {{ liczba_sztuk }}</p>
-<p><strong>Całkowita prowizja:</strong> {{ calkowita_prowizja }} PLN</p>
+
+<!-- Rozbicie zarobku: sprzedaż / zadania / suma -->
+<div class="row mb-4">
+    <div class="col-md-4 mb-2">
+        <div class="card h-100">
+            <div class="card-body py-3">
+                <h6 class="text-uppercase text-muted mb-1" style="font-size:0.75rem;">Ze sprzedaży</h6>
+                <div class="small text-muted mb-2">stawki bazowe modeli</div>
+                <div class="fs-4 fw-bold">{{ prowizja_ze_sprzedazy|floatformat:2 }} PLN</div>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-4 mb-2">
+        <div class="card border-warning h-100">
+            <div class="card-body py-3">
+                <h6 class="text-uppercase text-muted mb-1" style="font-size:0.75rem;">Z zadań</h6>
+                <div class="small text-muted mb-2">
+                    premie progowe: {{ premie_progowe|floatformat:2 }} PLN<br>
+                    bonusy z mnożników: {{ bonus_mnoznikowy|floatformat:2 }} PLN
+                </div>
+                <div class="fs-4 fw-bold text-warning-emphasis">{{ prowizja_z_zadan|floatformat:2 }} PLN</div>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-4 mb-2">
+        <div class="card border-success h-100 bg-light">
+            <div class="card-body py-3">
+                <h6 class="text-uppercase text-muted mb-1" style="font-size:0.75rem;">Razem zarobione</h6>
+                <div class="small text-muted mb-2">sprzedaż + zadania</div>
+                <div class="fs-3 fw-bold text-success">{{ suma_calkowita|floatformat:2 }} PLN</div>
+            </div>
+        </div>
+    </div>
+</div>
 
 <!-- Podział na grupy targetowe -->
 <div class="row mb-4">
@@ -214,23 +247,64 @@
 {% endif %}
 {% if task_rewards %}
 <h2>Rozliczenia zadań</h2>
-<table>
-    <thead>
+<p class="text-muted small">
+    Zadania aktywne w wybranym okresie. Wykonane są na górze.
+    Zadania typu „Mix mnożnik” zarabiają przez podniesioną stawkę przy każdej sprzedaży
+    (kolumna „Bonus”), a pozostałe przez premię za osiągnięty próg.
+</p>
+<table class="table table-striped align-middle">
+    <thead class="table-dark">
         <tr>
             <th>Zadanie</th>
-            <th>Sprzedane sztuki</th>
-            <th>Premia</th>
+            <th>Typ</th>
+            <th class="text-center">Status</th>
+            <th class="text-center">Sprzedane / próg</th>
+            <th class="text-end">Premia</th>
+            <th class="text-end">Bonus</th>
+            <th class="text-end">Zarobek</th>
         </tr>
     </thead>
     <tbody>
         {% for r in task_rewards %}
-        <tr>
-            <td>{{ r.nazwa }}</td>
-            <td>{{ r.sprzedane }}</td>
-            <td>{{ r.premia }} PLN</td>
+        <tr {% if r.wykonane %}class="table-success"{% endif %}>
+            <td>
+                <a href="{% url 'produkty:szczegoly_zadania' r.id %}">{{ r.nazwa }}</a>
+                <br><small class="text-muted">{{ r.data_start }} – {{ r.data_koniec }}</small>
+            </td>
+            <td><small>{{ r.typ }}</small></td>
+            <td class="text-center">
+                {% if r.wykonane %}
+                    <span class="badge bg-success">Wykonane</span>
+                {% else %}
+                    <span class="badge bg-secondary">W trakcie</span>
+                {% endif %}
+            </td>
+            <td class="text-center">
+                <strong>{{ r.sprzedane }}</strong>
+                {% if r.prog_osiagniety %}
+                    / {{ r.prog_osiagniety }}
+                {% elif r.prog_mix %}
+                    / {{ r.prog_mix }}
+                {% elif r.prog_2 %}
+                    / {{ r.prog_1 }} lub {{ r.prog_2 }}
+                {% elif r.prog_1 %}
+                    / {{ r.prog_1 }}
+                {% endif %}
+            </td>
+            <td class="text-end">{% if r.premia %}{{ r.premia|floatformat:2 }} PLN{% else %}<span class="text-muted">—</span>{% endif %}</td>
+            <td class="text-end">{% if r.bonus_mnoznik %}{{ r.bonus_mnoznik|floatformat:2 }} PLN{% else %}<span class="text-muted">—</span>{% endif %}</td>
+            <td class="text-end"><strong>{% if r.zarobek %}{{ r.zarobek|floatformat:2 }} PLN{% else %}—{% endif %}</strong></td>
         </tr>
         {% endfor %}
     </tbody>
+    <tfoot>
+        <tr class="fw-bold">
+            <td colspan="4" class="text-end">Razem z zadań:</td>
+            <td class="text-end">{{ premie_progowe|floatformat:2 }} PLN</td>
+            <td class="text-end">{{ bonus_mnoznikowy|floatformat:2 }} PLN</td>
+            <td class="text-end text-success">{{ prowizja_z_zadan|floatformat:2 }} PLN</td>
+        </tr>
+    </tfoot>
 </table>
 {% endif %}
 {% endblock %}
