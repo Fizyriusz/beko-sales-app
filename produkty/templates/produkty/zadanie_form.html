@@ -102,16 +102,68 @@
         </div>
         <div style="display:none;">{{ form.produkty }}</div>
 
-        <div class="row mt-3">
+        <hr class="mt-4">
+        <h5 class="mb-3">Rozliczenie zadania</h5>
+
+        <div class="row">
             <div class="col-md-6 mb-3">
-                <label for="{{ form.prog_1.id_for_label }}" class="form-label">{{ form.prog_1.label }}</label>
-                {{ form.prog_1 }}
-                {% if form.prog_1.errors %}<div class="invalid-feedback d-block">{{ form.prog_1.errors }}</div>{% endif %}
+                <label for="{{ form.typ.id_for_label }}" class="form-label">{{ form.typ.label }}</label>
+                {{ form.typ }}
+                <div class="form-text">Od typu zależy, które pola poniżej są brane pod uwagę.</div>
+                {% if form.typ.errors %}<div class="invalid-feedback d-block">{{ form.typ.errors }}</div>{% endif %}
             </div>
             <div class="col-md-6 mb-3">
-                <label for="{{ form.prog_2.id_for_label }}" class="form-label">{{ form.prog_2.label }}</label>
-                {{ form.prog_2 }}
-                {% if form.prog_2.errors %}<div class="invalid-feedback d-block">{{ form.prog_2.errors }}</div>{% endif %}
+                <label for="{{ form.target.id_for_label }}" class="form-label">{{ form.target.label }}</label>
+                {{ form.target }}
+                {% if form.target.errors %}<div class="invalid-feedback d-block">{{ form.target.errors }}</div>{% endif %}
+            </div>
+        </div>
+
+        <!-- Progi z premią: KONKRETNE_MODELE i MIX_PROWIZJA -->
+        <div id="sekcja-progi" class="border rounded p-3 mb-3">
+            <p class="fw-bold mb-2">Progi i premie</p>
+            <div class="row">
+                <div class="col-md-3 mb-3">
+                    <label for="{{ form.prog_1.id_for_label }}" class="form-label">{{ form.prog_1.label }}</label>
+                    {{ form.prog_1 }}
+                    {% if form.prog_1.errors %}<div class="invalid-feedback d-block">{{ form.prog_1.errors }}</div>{% endif %}
+                </div>
+                <div class="col-md-3 mb-3">
+                    <label for="{{ form.prog_1_premia.id_for_label }}" class="form-label">{{ form.prog_1_premia.label }}</label>
+                    {{ form.prog_1_premia }}
+                    {% if form.prog_1_premia.errors %}<div class="invalid-feedback d-block">{{ form.prog_1_premia.errors }}</div>{% endif %}
+                </div>
+                <div class="col-md-3 mb-3">
+                    <label for="{{ form.prog_2.id_for_label }}" class="form-label">{{ form.prog_2.label }}</label>
+                    {{ form.prog_2 }}
+                    {% if form.prog_2.errors %}<div class="invalid-feedback d-block">{{ form.prog_2.errors }}</div>{% endif %}
+                </div>
+                <div class="col-md-3 mb-3">
+                    <label for="{{ form.prog_2_premia.id_for_label }}" class="form-label">{{ form.prog_2_premia.label }}</label>
+                    {{ form.prog_2_premia }}
+                    {% if form.prog_2_premia.errors %}<div class="invalid-feedback d-block">{{ form.prog_2_premia.errors }}</div>{% endif %}
+                </div>
+            </div>
+            <p class="form-text mb-0">
+                Premia za próg 2 ma pierwszeństwo przed premią za próg 1. Zostaw puste, jeśli zadanie ma tylko jeden próg.
+            </p>
+        </div>
+
+        <!-- Mix: próg mix i mnożnik -->
+        <div id="sekcja-mix" class="border rounded p-3 mb-3">
+            <p class="fw-bold mb-2">Parametry mix</p>
+            <div class="row">
+                <div class="col-md-4 mb-3">
+                    <label for="{{ form.prog_mix.id_for_label }}" class="form-label">{{ form.prog_mix.label }}</label>
+                    {{ form.prog_mix }}
+                    {% if form.prog_mix.errors %}<div class="invalid-feedback d-block">{{ form.prog_mix.errors }}</div>{% endif %}
+                </div>
+                <div class="col-md-4 mb-3" id="pole-mnoznik">
+                    <label for="{{ form.mnoznik_mix.id_for_label }}" class="form-label">{{ form.mnoznik_mix.label }}</label>
+                    {{ form.mnoznik_mix }}
+                    <div class="form-text">Np. 1.5 = stawka +50% po przekroczeniu progu.</div>
+                    {% if form.mnoznik_mix.errors %}<div class="invalid-feedback d-block">{{ form.mnoznik_mix.errors }}</div>{% endif %}
+                </div>
             </div>
         </div>
 
@@ -157,5 +209,5 @@
 {% endblock %}
 
 {% block extra_js %}
-<script src="{% static 'produkty/js/zadanie_form.js' %}"></script>
+<script src="{% static 'produkty/js/zadanie_form.js' %}?v=2"></script>
 {% endblock %}

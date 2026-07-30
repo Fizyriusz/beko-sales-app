@@ -15,15 +15,41 @@ class ZadanieForm(forms.ModelForm):
             'produkty': forms.SelectMultiple(attrs={'class': 'form-control', 'size': '10'}),
             'data_start': forms.DateInput(attrs={'class': 'form-control', 'type': 'date'}),
             'data_koniec': forms.DateInput(attrs={'class': 'form-control', 'type': 'date'}),
-            'target': forms.Select(attrs={'class': 'form-control'}),
-            'prog_1': forms.NumberInput(attrs={'class': 'form-control'}),
-            'prog_1_premia': forms.NumberInput(attrs={'class': 'form-control'}),
-            'prog_2': forms.NumberInput(attrs={'class': 'form-control'}),
-            'prog_2_premia': forms.NumberInput(attrs={'class': 'form-control'}),
-            'mnoznik_mix': forms.NumberInput(attrs={'class': 'form-control'}),
-            'prog_mix': forms.NumberInput(attrs={'class': 'form-control'}),
-            'typ': forms.Select(attrs={'class': 'form-control'}),
+            'target': forms.Select(attrs={'class': 'form-select'}),
+            'prog_1': forms.NumberInput(attrs={'class': 'form-control', 'min': 0}),
+            'prog_1_premia': forms.NumberInput(attrs={'class': 'form-control', 'step': '0.01', 'min': 0}),
+            'prog_2': forms.NumberInput(attrs={'class': 'form-control', 'min': 0}),
+            'prog_2_premia': forms.NumberInput(attrs={'class': 'form-control', 'step': '0.01', 'min': 0}),
+            'mnoznik_mix': forms.NumberInput(attrs={'class': 'form-control', 'step': '0.01', 'min': 0}),
+            'prog_mix': forms.NumberInput(attrs={'class': 'form-control', 'min': 0}),
+            'typ': forms.Select(attrs={'class': 'form-select', 'id': 'id_typ'}),
         }
+        labels = {
+            'nazwa': 'Nazwa zadania',
+            'opis': 'Opis',
+            'data_start': 'Data rozpoczęcia',
+            'data_koniec': 'Data zakończenia',
+            'typ': 'Typ zadania',
+            'target': 'Cel liczony wg',
+            'prog_1': 'Próg 1 (szt.)',
+            'prog_1_premia': 'Premia za próg 1 (PLN)',
+            'prog_2': 'Próg 2 (szt.)',
+            'prog_2_premia': 'Premia za próg 2 (PLN)',
+            'prog_mix': 'Próg mix (szt.)',
+            'mnoznik_mix': 'Mnożnik stawki',
+        }
+        help_texts = {
+            'prog_1_premia': 'Kwota wypłacana po osiągnięciu progu 1.',
+            'prog_2_premia': 'Kwota wypłacana po osiągnięciu progu 2 (ma pierwszeństwo przed progiem 1).',
+            'mnoznik_mix': 'Np. 1.5 = stawka podniesiona o 50% po przekroczeniu progu mix.',
+        }
+
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        # Zadania zapisane przed wprowadzeniem typow moga miec pusty typ -
+        # podstawiamy sensowna wartosc, zeby edycja nie wysypywala walidacji.
+        if not self.initial.get('typ') and not self.data.get('typ'):
+            self.initial['typ'] = Zadanie.Typ.KONKRETNE_MODELE
 
     def clean(self):
         cleaned_data = super().clean()
